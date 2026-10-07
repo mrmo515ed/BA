@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -97,6 +99,8 @@ fun AnimeTopAppBar(
     unreadCount: Int = 0,
     onNotificationsClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onReelsClick: () -> Unit = {},
+    onGamesClick: () -> Unit = {},
     onProfileClick: () -> Unit
 ) {
     TopAppBar(
@@ -160,6 +164,28 @@ fun AnimeTopAppBar(
             }
         },
         actions = {
+            IconButton(
+                onClick = onReelsClick,
+                modifier = Modifier.testTag("app_bar_reels_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Movie,
+                    contentDescription = "ريلز الأنمي",
+                    tint = AnimeViolet
+                )
+            }
+
+            IconButton(
+                onClick = onGamesClick,
+                modifier = Modifier.testTag("app_bar_games_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = "ألعاب ومكافآت الأوتاكو",
+                    tint = AnimeGold
+                )
+            }
+
             IconButton(
                 onClick = onSearchClick,
                 modifier = Modifier.testTag("app_bar_search_button")
@@ -1029,17 +1055,21 @@ fun CommentsBottomSheet(
     }
 }
 
-// Dialog to create Anime Club / Channel
+// Dialog to create Anime Club / Channel / Group
 @Composable
 fun CreateChannelDialog(
     onDismiss: () -> Unit,
-    onSubmit: (title: String, description: String, category: String) -> Unit
+    onSubmit: (title: String, description: String, category: String, series: String, isBroadcast: Boolean, isPrivate: Boolean) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("عام") }
+    var series by remember { mutableStateOf("عام") }
+    var category by remember { mutableStateOf("مجموعة عامة") }
+    var isBroadcast by remember { mutableStateOf(false) }
+    var isPrivate by remember { mutableStateOf(false) }
 
-    val categories = listOf("عام", "شونين وقتالات", "مانجا ونظريات", "أخبار رسمية", "توصيات ومراجعات", "كوسبلاي وتصاميم")
+    val categories = listOf("مجموعة نقاش", "قناة بث أخبار", "سلسلة أنمي", "مانجا ونظريات")
+    val animeSeriesList = listOf("عام", "ون بيس", "هجوم العمالقة", "جوجوتسو كايسن", "سولو ليفلينغ", "دراغون بول")
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1050,7 +1080,7 @@ fun CreateChannelDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "إنشاء نادي / قناة أنمي جديدة 🛡️",
+                    text = "إنشاء نادي أو قناة أنمي 🛡️",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = AnimeTextPrimary
@@ -1061,7 +1091,7 @@ fun CreateChannelDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("اسم القناة (مثال: محبي ون بيس)") },
+                    label = { Text("اسم النادي / القناة (مثال: محبي ون بيس)") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("create_channel_title"),
@@ -1079,7 +1109,7 @@ fun CreateChannelDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("وصف القناة وأهدافها...") },
+                    label = { Text("الوصف والقواعد...") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1090,35 +1120,88 @@ fun CreateChannelDialog(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                Text("التصنيف:", fontSize = 12.sp, color = AnimeTextSecondary)
-                Spacer(modifier = Modifier.height(6.dp))
-
+                // Type selector: Broadcast vs Discussion
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    categories.take(3).forEach { cat ->
-                        val isSelected = category == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) AnimeCrimson else AnimeCardSurface)
-                                .clickable { category = cat }
-                                .padding(horizontal = 8.dp, vertical = 6.dp)
-                        ) {
-                            Text(cat, fontSize = 10.sp, color = Color.White)
-                        }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (!isBroadcast) AnimeCrimson else AnimeCardSurface)
+                            .clickable { isBroadcast = false }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "💬 مجموعة مناقشة",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isBroadcast) AnimeViolet else AnimeCardSurface)
+                            .clickable { isBroadcast = true }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "⚡ قناة بث (للمسؤولين فقط)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Public vs Private
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (!isPrivate) AnimeCardSurfaceHover else AnimeCardSurface)
+                            .border(1.dp, if (!isPrivate) AnimeGold else AnimeBorder, RoundedCornerShape(10.dp))
+                            .clickable { isPrivate = false }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🌐 عامة للجميع", fontSize = 11.sp, color = AnimeTextPrimary)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isPrivate) AnimeCardSurfaceHover else AnimeCardSurface)
+                            .border(1.dp, if (isPrivate) AnimeGold else AnimeBorder, RoundedCornerShape(10.dp))
+                            .clickable { isPrivate = true }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🔒 خاصة بالدعوة فقط", fontSize = 11.sp, color = AnimeTextPrimary)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Button(
                     onClick = {
                         if (title.isNotBlank()) {
-                            onSubmit(title.trim(), description.trim(), category)
+                            onSubmit(title.trim(), description.trim(), if (isBroadcast) "قناة بث" else "مجموعة", series, isBroadcast, isPrivate)
                             onDismiss()
                         }
                     },

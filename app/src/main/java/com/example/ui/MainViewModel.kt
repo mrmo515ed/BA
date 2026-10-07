@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.Channel
 import com.example.data.model.Comment
+import com.example.data.model.FriendRequest
+import com.example.data.model.LiveComment
+import com.example.data.model.LiveStream
 import com.example.data.model.Message
 import com.example.data.model.NotificationItem
 import com.example.data.model.Post
@@ -33,6 +36,16 @@ class MainViewModel(
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
+    // All Users
+    val allUsers: StateFlow<List<UserProfile>> = repository.observeAllUsers()
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Friend Requests
+    val friendRequests: StateFlow<List<FriendRequest>> = repository.observeFriendRequests(currentUserId)
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Posts stream
     val posts: StateFlow<List<Post>> = repository.observePosts()
         .catch { e ->
@@ -56,6 +69,21 @@ class MainViewModel(
             emit(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Live Streams stream
+    val liveStreams: StateFlow<List<LiveStream>> = repository.observeLiveStreams()
+        .catch { e ->
+            Log.e(TAG, "Error observing live streams: ${e.message}", e)
+            emit(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Active Live Stream
+    private val _activeLiveStream = MutableStateFlow<LiveStream?>(null)
+    val activeLiveStream: StateFlow<LiveStream?> = _activeLiveStream.asStateFlow()
+
+    private val _liveComments = MutableStateFlow<List<LiveComment>>(emptyList())
+    val liveComments: StateFlow<List<LiveComment>> = _liveComments.asStateFlow()
 
     // Notifications stream
     val notifications: StateFlow<List<NotificationItem>> = repository.observeNotifications(currentUserId)
@@ -87,20 +115,17 @@ class MainViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _searchFilter = MutableStateFlow("ALL") // ALL, USERS, POSTS, CHANNELS
+    private val _searchFilter = MutableStateFlow("ALL")
     val searchFilter: StateFlow<String> = _searchFilter.asStateFlow()
 
     init {
         viewModelScope.launch {
             try {
-                // Ensure profile is initialized in Firestore
                 val profile = repository.getOrCreateUserProfile(currentUser)
                 _userProfile.value = profile
 
-                // Seed initial anime content if first run
                 repository.seedInitialContentIfEmpty(currentUser)
 
-                // Observe real-time user profile
                 repository.observeUserProfile(currentUserId).collect { updated ->
                     if (updated != null) {
                         _userProfile.value = updated
@@ -108,6 +133,117 @@ class MainViewModel(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Init user profile failed: ${e.message}", e)
+            }
+        }
+    }
+
+    // Live Streaming
+    fun startLiveStream(title: String, topic: String, preview: String) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val stream = LiveStream(
+                    hostId = currentUserId,
+                    hostName = profile?.displayName ?: currentUser.displayName ?: "مضيف البث",
+                    hostAvatarUrl = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: "",
+                    title = title,
+                    animeTopic = topic,
+                    previewImage = preview,
+                    viewersCount = 1L,
+                    isLive = true
+                )
+                val streamId = repository.startLiveStream(stream)
+                openLiveStream(stream.copy(id = streamId))
+            } catch (e: Exception) {
+                Log.e(TAG, "Start live stream failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun openLiveStream(stream: LiveStream) {
+        _activeLiveStream.value = stream
+        viewModelScope.launch {
+            repository.observeLiveComments(stream.id).collect { comments ->
+                _liveComments.value = comments
+            }
+        }
+    }
+
+    fun closeLiveStream() {
+        val stream = _activeLiveStream.value
+        if (stream != null && stream.hostId == currentUserId) {
+            viewModelScope.launch {
+                repository.endLiveStream(stream.id)
+            }
+        }
+        _activeLiveStream.value = null
+        _liveComments.value = emptyList()
+    }
+
+    fun toggleLiveControls(isMuted: Boolean, isCameraOff: Boolean) {
+        val stream = _activeLiveStream.value ?: return
+        _activeLiveStream.value = stream.copy(isMuted = isMuted, isCameraOff = isCameraOff)
+        viewModelScope.launch {
+            repository.updateLiveControls(stream.id, isMuted, isCameraOff)
+        }
+    }
+
+    fun sendLiveComment(content: String) {
+        val stream = _activeLiveStream.value ?: return
+        if (content.isBlank()) return
+        viewModelScope.launch {
+            val profile = _userProfile.value
+            val comment = LiveComment(
+                streamId = stream.id,
+                senderId = currentUserId,
+                senderName = profile?.displayName ?: currentUser.displayName ?: "مشاهد",
+                senderAvatarUrl = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: "",
+                content = content.trim()
+            )
+            repository.sendLiveComment(comment)
+        }
+    }
+
+    // Follow & Friendship
+    fun toggleFollowUser(targetUserId: String) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value ?: return@launch
+                if (profile.following.contains(targetUserId)) {
+                    repository.unfollowUser(currentUserId, targetUserId)
+                } else {
+                    repository.followUser(currentUserId, targetUserId)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Toggle follow failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun sendFriendRequest(targetUserId: String) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val request = FriendRequest(
+                    senderId = currentUserId,
+                    senderName = profile?.displayName ?: currentUser.displayName ?: "أوتاكو",
+                    senderAvatarUrl = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: "",
+                    receiverId = targetUserId,
+                    status = "PENDING"
+                )
+                repository.sendFriendRequest(request)
+            } catch (e: Exception) {
+                Log.e(TAG, "Send friend request failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun respondToFriendRequest(requestId: String, accept: Boolean, senderId: String) {
+        viewModelScope.launch {
+            try {
+                repository.respondToFriendRequest(requestId, accept, senderId, currentUserId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Respond friend request failed: ${e.message}", e)
             }
         }
     }
@@ -148,6 +284,16 @@ class MainViewModel(
                 repository.toggleLikePost(postId, currentUserId, userName)
             } catch (e: Exception) {
                 Log.e(TAG, "Toggle like failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun reSharePost(postId: String) {
+        viewModelScope.launch {
+            try {
+                repository.reSharePost(postId)
+            } catch (e: Exception) {
+                Log.e(TAG, "ReShare post failed: ${e.message}", e)
             }
         }
     }
@@ -230,24 +376,34 @@ class MainViewModel(
         }
     }
 
-    fun createChannel(title: String, description: String, category: String) {
+    fun createBroadcastOrGroup(
+        title: String,
+        description: String,
+        category: String,
+        series: String,
+        isBroadcast: Boolean,
+        isPrivate: Boolean
+    ) {
         viewModelScope.launch {
             try {
                 val channel = Channel(
                     title = title,
                     description = description,
                     animeCategory = category,
+                    animeSeries = series,
+                    isBroadcastOnly = isBroadcast,
+                    isPrivate = isPrivate,
                     memberCount = 1L,
                     members = listOf(currentUserId),
+                    admins = listOf(currentUserId),
                     createdBy = currentUserId,
-                    lastMessageText = "تم إنشاء القناة بواسطة المنشئ",
+                    lastMessageText = if (isBroadcast) "بدأ البث في القناة" else "تم إنشاء المجموعة",
                     lastMessageTime = System.currentTimeMillis()
                 )
                 val channelId = repository.createChannel(channel)
-                // Open created channel immediately
                 openChannel(channel.copy(id = channelId))
             } catch (e: Exception) {
-                Log.e(TAG, "Create channel failed: ${e.message}", e)
+                Log.e(TAG, "Create channel/group failed: ${e.message}", e)
             }
         }
     }
@@ -316,6 +472,73 @@ class MainViewModel(
                 _userProfile.value = updated
             } catch (e: Exception) {
                 Log.e(TAG, "Update profile failed: ${e.message}", e)
+            }
+        }
+    }
+
+    // Reels stream
+    val reels: StateFlow<List<com.example.data.model.ReelItem>> = repository.observeReels()
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Economy profile
+    private val _economyProfile = MutableStateFlow(com.example.data.model.EconomyProfile(userId = currentUserId))
+    val economyProfile: StateFlow<com.example.data.model.EconomyProfile> = _economyProfile.asStateFlow()
+
+    fun toggleLikeReel(reelId: String) {
+        viewModelScope.launch {
+            try {
+                repository.toggleLikeReel(reelId, currentUserId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Toggle like reel failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun createReel(caption: String, animeTitle: String, previewRes: String) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val reel = com.example.data.model.ReelItem(
+                    authorId = currentUserId,
+                    authorName = profile?.displayName ?: currentUser.displayName ?: "صانع ريلز",
+                    authorAvatarUrl = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: "",
+                    videoPreviewRes = previewRes,
+                    caption = caption,
+                    animeTitle = animeTitle
+                )
+                repository.createReel(reel)
+            } catch (e: Exception) {
+                Log.e(TAG, "Create reel failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun claimDailyReward() {
+        viewModelScope.launch {
+            try {
+                val updated = repository.claimDailyReward(currentUserId)
+                _economyProfile.value = updated
+            } catch (e: Exception) {
+                Log.e(TAG, "Claim daily reward failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun submitReport(targetId: String, targetType: String, reason: String) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val report = com.example.data.model.ReportItem(
+                    reporterId = currentUserId,
+                    reporterName = profile?.displayName ?: currentUser.displayName ?: "مستخدم",
+                    targetId = targetId,
+                    targetType = targetType,
+                    reason = reason
+                )
+                repository.submitReport(report)
+            } catch (e: Exception) {
+                Log.e(TAG, "Submit report failed: ${e.message}", e)
             }
         }
     }

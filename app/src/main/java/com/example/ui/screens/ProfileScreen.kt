@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MilitaryTech
@@ -53,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
+import com.example.data.model.FriendRequest
 import com.example.data.model.Post
 import com.example.data.model.UserProfile
 import com.example.ui.components.AnimeAvatar
@@ -70,6 +71,7 @@ import com.example.ui.theme.AnimeBorder
 import com.example.ui.theme.AnimeCardSurface
 import com.example.ui.theme.AnimeCardSurfaceHover
 import com.example.ui.theme.AnimeCrimson
+import com.example.ui.theme.AnimeDarkSurface
 import com.example.ui.theme.AnimeCyan
 import com.example.ui.theme.AnimeGold
 import com.example.ui.theme.AnimeTextMuted
@@ -81,13 +83,18 @@ import com.example.ui.theme.AnimeViolet
 fun ProfileScreen(
     profile: UserProfile?,
     userPosts: List<Post>,
+    friendRequests: List<FriendRequest>,
+    onAcceptFriendRequest: (FriendRequest) -> Unit,
+    onDeclineFriendRequest: (FriendRequest) -> Unit,
     onUpdateProfile: (displayName: String, bio: String, favAnime: String, favChar: String, role: String) -> Unit,
+    onOpenEconomyClick: () -> Unit = {},
     onSignOutClick: () -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
+    var showUsersListDialogType by remember { mutableStateOf<String?>(null) } // "FRIENDS", "FOLLOWERS", "FOLLOWING"
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("منشوراتي", "قائمة المشاهدة", "الأوسمة")
+    val tabs = listOf("المنشورات والأنشطة", "الأنمي المفضل", "الأوسمة")
 
     val user = profile ?: UserProfile()
 
@@ -97,24 +104,24 @@ fun ProfileScreen(
             .testTag("profile_screen"),
         contentPadding = PaddingValues(bottom = 90.dp)
     ) {
-        // Banner & Avatar Section
+        // Banner & Avatar
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
             ) {
-                // Header Banner
+                // Cover Image
                 Image(
                     painter = painterResource(id = R.drawable.black_anime_banner_1791388840143),
-                    contentDescription = "بانر الملف الشخصي",
+                    contentDescription = "صورة الغلاف",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
                 )
 
-                // Large Avatar
+                // Avatar
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -128,7 +135,7 @@ fun ProfileScreen(
                     )
                 }
 
-                // Sign Out Icon Button
+                // Sign Out
                 IconButton(
                     onClick = { showSignOutConfirm = true },
                     modifier = Modifier
@@ -147,7 +154,7 @@ fun ProfileScreen(
             }
         }
 
-        // User Info & Bio
+        // Info & Bio
         item {
             Column(
                 modifier = Modifier
@@ -168,7 +175,6 @@ fun ProfileScreen(
                                 color = AnimeTextPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            // Role Badge
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
@@ -225,69 +231,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Favorite Anime & Character Cards
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
-                        border = BorderStroke(1.dp, AnimeBorder),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Movie,
-                                    contentDescription = null,
-                                    tint = AnimeGold,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("الأنمي المفضل", fontSize = 10.sp, color = AnimeTextMuted)
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = user.favoriteAnime,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AnimeTextPrimary
-                            )
-                        }
-                    }
-
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
-                        border = BorderStroke(1.dp, AnimeBorder),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = AnimeCrimson,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("الشخصية المفضلة", fontSize = 10.sp, color = AnimeTextMuted)
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = user.favoriteCharacter,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AnimeTextPrimary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Stats Row
+                // Stats: Friends, Followers, Following, Posts
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -297,9 +241,123 @@ fun ProfileScreen(
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileStatItem(title = "المنشورات", count = userPosts.size.toLong())
-                    ProfileStatItem(title = "المتابعون", count = user.followersCount)
-                    ProfileStatItem(title = "يتابع", count = user.followingCount)
+                    ProfileStatItem(title = "المنشورات", count = userPosts.size.toLong(), onClick = {})
+                    ProfileStatItem(title = "الأصدقاء 🤝", count = user.friends.size.toLong(), onClick = { showUsersListDialogType = "الأصدقاء" })
+                    ProfileStatItem(title = "المتابعون 👥", count = user.followers.size.toLong(), onClick = { showUsersListDialogType = "المتابعون" })
+                    ProfileStatItem(title = "يتابع ⚡", count = user.following.size.toLong(), onClick = { showUsersListDialogType = "يتابعهم" })
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Otaku Games & Rewards Entry Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenEconomyClick() },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                    border = BorderStroke(1.dp, AnimeGold)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(AnimeGold.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🏆", fontSize = 20.sp)
+                            }
+                            Column {
+                                Text(
+                                    text = "نادي ألعاب ومكافآت الأوتاكو",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = AnimeTextPrimary
+                                )
+                                Text(
+                                    text = "المكافأة اليومية • كويز الأنمي • بطاقات نادرة",
+                                    fontSize = 11.sp,
+                                    color = AnimeGold
+                                )
+                            }
+                        }
+                        Text(
+                            text = "دخول 🎮",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AnimeGold
+                        )
+                    }
+                }
+            }
+        }
+
+        // Pending Friend Requests Banner
+        if (friendRequests.isNotEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "طلبات الصداقة المعلقة (${friendRequests.size}) 🤝",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = AnimeGold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    friendRequests.forEach { req ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                            border = BorderStroke(1.dp, AnimeGold.copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    AnimeAvatar(avatarUrl = req.senderAvatarUrl, displayName = req.senderName, size = 34)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = req.senderName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AnimeTextPrimary)
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    IconButton(
+                                        onClick = { onAcceptFriendRequest(req) },
+                                        modifier = Modifier.size(32.dp).clip(CircleShape).background(AnimeCrimson)
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = "قبول", tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+
+                                    IconButton(
+                                        onClick = { onDeclineFriendRequest(req) },
+                                        modifier = Modifier.size(32.dp).clip(CircleShape).background(AnimeCardSurfaceHover)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "رفض", tint = AnimeTextSecondary, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -325,7 +383,7 @@ fun ProfileScreen(
                         text = {
                             Text(
                                 text = title,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selectedTabIndex == index) AnimeCrimson else AnimeTextSecondary
                             )
@@ -339,7 +397,7 @@ fun ProfileScreen(
         // Tab Content
         when (selectedTabIndex) {
             0 -> {
-                // User's Posts
+                // Recent Posts & Activity
                 if (userPosts.isEmpty()) {
                     item {
                         Box(
@@ -379,19 +437,10 @@ fun ProfileScreen(
                                     color = AnimeTextPrimary
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    Text(
-                                        text = "❤️ ${post.likesCount}",
-                                        fontSize = 11.sp,
-                                        color = AnimeCrimson
-                                    )
-                                    Text(
-                                        text = "💬 ${post.commentsCount}",
-                                        fontSize = 11.sp,
-                                        color = AnimeTextSecondary
-                                    )
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Text(text = "❤️ ${post.likesCount}", fontSize = 11.sp, color = AnimeCrimson)
+                                    Text(text = "💬 ${post.commentsCount}", fontSize = 11.sp, color = AnimeTextSecondary)
+                                    Text(text = "🔁 ${post.sharesCount}", fontSize = 11.sp, color = AnimeViolet)
                                 }
                             }
                         }
@@ -399,13 +448,13 @@ fun ProfileScreen(
                 }
             }
             1 -> {
-                // Watchlist Items
+                // Favorite Anime Section
                 item {
-                    val watchlist = listOf(
-                        Triple("هجوم العمالقة (Attack on Titan)", "مكتمل ⭐ 10/10", AnimeGold),
-                        Triple("سولو ليفلينغ (Solo Leveling)", "أشاهده حالياً 🔥", AnimeCrimson),
-                        Triple("جوجوتسو كايسن (Jujutsu Kaisen)", "مكتمل ⭐ 9.5/10", AnimeGold),
-                        Triple("قاتل الشياطين (Demon Slayer)", "مخطط للمشاهدة 🍿", AnimeCyan)
+                    val favoriteList = listOf(
+                        Triple(user.favoriteAnime, "الأنمي المفضل الأول ⭐ 10/10", AnimeGold),
+                        Triple("ون بيس (One Piece)", "مستمر • أسطوري 🔥", AnimeCrimson),
+                        Triple("جوجوتسو كايسن (Jujutsu Kaisen)", "مكتمل • رائع ⚡", AnimeCyan),
+                        Triple("سولو ليفلينغ (Solo Leveling)", "الموسم الجديد قريباً 🍿", AnimeViolet)
                     )
 
                     Column(
@@ -414,10 +463,10 @@ fun ProfileScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        watchlist.forEach { (anime, status, color) ->
+                        favoriteList.forEach { (anime, desc, color) ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
                                 border = BorderStroke(1.dp, AnimeBorder)
                             ) {
@@ -428,17 +477,34 @@ fun ProfileScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = anime,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AnimeTextPrimary
-                                    )
-                                    Text(
-                                        text = status,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = color
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Movie,
+                                            contentDescription = null,
+                                            tint = color,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = anime,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AnimeTextPrimary
+                                            )
+                                            Text(
+                                                text = desc,
+                                                fontSize = 11.sp,
+                                                color = color
+                                            )
+                                        }
+                                    }
+
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = AnimeGold,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
@@ -451,8 +517,9 @@ fun ProfileScreen(
                 item {
                     val badges = listOf(
                         Pair("عضو مؤسس 🖤", "من أوائل المنضمين لشبكة بلاك انمي"),
+                        Pair("مذيع مباشر 🔴", "بدأ بثوثاً مباشرة لمناقشة الأنمي"),
                         Pair("ناقد شونين ⚔️", "تفاعل وشارك أكثر من 10 مراجعات ونظريات"),
-                        Pair("صانع قصص ⚡", "نشر أكثر من 5 قصص أنمي في المجتمع")
+                        Pair("صانع قصص ⚡", "نشر قصص وحالات أنمي مميزة")
                     )
 
                     Column(
@@ -496,6 +563,44 @@ fun ProfileScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Users List Dialog (Friends / Followers / Following)
+    if (showUsersListDialogType != null) {
+        Dialog(onDismissRequest = { showUsersListDialogType = null }) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = AnimeDarkSurface),
+                border = BorderStroke(1.dp, AnimeBorder)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "قائمة ${showUsersListDialogType!!}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = AnimeTextPrimary
+                        )
+                        IconButton(onClick = { showUsersListDialogType = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = AnimeTextSecondary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "يتم تحديث قائمة ${showUsersListDialogType!!} ومزامنتها مباشرة عبر قاعدة البيانات السحابية.",
+                        fontSize = 12.sp,
+                        color = AnimeTextSecondary
+                    )
                 }
             }
         }
@@ -604,7 +709,7 @@ fun ProfileScreen(
         }
     }
 
-    // Sign Out Confirmation Dialog
+    // Sign Out Dialog
     if (showSignOutConfirm) {
         AlertDialog(
             onDismissRequest = { showSignOutConfirm = false },
@@ -631,11 +736,14 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileStatItem(title: String, count: Long) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun ProfileStatItem(title: String, count: Long, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }
+    ) {
         Text(
             text = count.toString(),
-            fontSize = 17.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Black,
             color = AnimeTextPrimary
         )

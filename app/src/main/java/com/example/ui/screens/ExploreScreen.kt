@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,22 +21,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
@@ -54,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +72,7 @@ import com.example.ui.theme.AnimeBorder
 import com.example.ui.theme.AnimeCardSurface
 import com.example.ui.theme.AnimeCardSurfaceHover
 import com.example.ui.theme.AnimeCrimson
+import com.example.ui.theme.AnimeCyan
 import com.example.ui.theme.AnimeGold
 import com.example.ui.theme.AnimeTextMuted
 import com.example.ui.theme.AnimeTextPrimary
@@ -82,12 +86,17 @@ fun ExploreScreen(
     onSearchQueryChange: (String) -> Unit,
     posts: List<Post>,
     channels: List<Channel>,
+    allUsers: List<UserProfile>,
     currentUserProfile: UserProfile?,
+    currentUserId: String,
+    onFollowToggle: (String) -> Unit,
+    onSendFriendRequest: (String) -> Unit,
     onPostClick: (Post) -> Unit,
     onChannelClick: (Channel) -> Unit
 ) {
+    val context = LocalContext.current
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("الكل", "المحتوى المرئي", "القنوات والنوادي", "الأوتاكو")
+    val tabs = listOf("الكل", "المستخدمون", "الأنمي والسلاسل", "المحتوى المرئي", "القنوات والنوادي")
 
     val trendingTags = listOf(
         "هجوم_العمالقة" to "1.8K منشور",
@@ -98,8 +107,35 @@ fun ExploreScreen(
         "ديث_نوت" to "650 منشور"
     )
 
-    // Filter results according to query
+    val animeSeriesDatabase = listOf(
+        Pair("هجوم العمالقة (Attack on Titan)", "شونين، أكشن، غموض، عمالقة"),
+        Pair("ون بيس (One Piece)", "شونين، قراصنة، مغامرات، كوميديا"),
+        Pair("جوجوتسو كايسن (Jujutsu Kaisen)", "أكشن، خوارق، شياطين، قتالات"),
+        Pair("سولو ليفلينغ (Solo Leveling)", "خيال، بوابات، صيادين، مستوى"),
+        Pair("قاتل الشياطين (Demon Slayer)", "تاريخي، سيوف، شياطين، عائلة"),
+        Pair("ديث نوت (Death Note)", "غموض، ذكاء، إثارة نفسية، شينغامي")
+    )
+
     val trimmedQuery = searchQuery.trim()
+
+    val matchedUsers = remember(allUsers, trimmedQuery) {
+        if (trimmedQuery.isEmpty()) allUsers.filter { it.userId != currentUserId }
+        else allUsers.filter {
+            (it.displayName.contains(trimmedQuery, ignoreCase = true) ||
+            it.username.contains(trimmedQuery, ignoreCase = true) ||
+            it.favoriteAnime.contains(trimmedQuery, ignoreCase = true) ||
+            it.favoriteCharacter.contains(trimmedQuery, ignoreCase = true)) &&
+            it.userId != currentUserId
+        }
+    }
+
+    val matchedAnimeSeries = remember(animeSeriesDatabase, trimmedQuery) {
+        if (trimmedQuery.isEmpty()) animeSeriesDatabase
+        else animeSeriesDatabase.filter {
+            it.first.contains(trimmedQuery, ignoreCase = true) ||
+            it.second.contains(trimmedQuery, ignoreCase = true)
+        }
+    }
 
     val matchedPosts = remember(posts, trimmedQuery) {
         if (trimmedQuery.isEmpty()) emptyList()
@@ -116,7 +152,8 @@ fun ExploreScreen(
         else channels.filter {
             it.title.contains(trimmedQuery, ignoreCase = true) ||
             it.description.contains(trimmedQuery, ignoreCase = true) ||
-            it.animeCategory.contains(trimmedQuery, ignoreCase = true)
+            it.animeCategory.contains(trimmedQuery, ignoreCase = true) ||
+            it.animeSeries.contains(trimmedQuery, ignoreCase = true)
         }
     }
 
@@ -125,15 +162,15 @@ fun ExploreScreen(
             .fillMaxSize()
             .padding(top = 8.dp)
     ) {
-        // Search Header Field
+        // Search Header
         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
                 placeholder = {
                     Text(
-                        text = "ابحث عن أنمي، منشورات، نوادي، أو مستخدمين...",
-                        fontSize = 13.sp,
+                        text = "ابحث عن مستخدمين، أنمي، حلقات، صور، أو قنوات...",
+                        fontSize = 12.sp,
                         color = AnimeTextMuted
                     )
                 },
@@ -171,7 +208,7 @@ fun ExploreScreen(
             )
         }
 
-        // Search Filter Tabs
+        // Filter Tabs
         ScrollableTabRow(
             selectedTabIndex = selectedTabIndex,
             containerColor = Color.Transparent,
@@ -192,7 +229,7 @@ fun ExploreScreen(
                     text = {
                         Text(
                             text = title,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTabIndex == index) AnimeCrimson else AnimeTextSecondary
                         )
@@ -203,19 +240,18 @@ fun ExploreScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Content Area
-        if (searchQuery.isBlank()) {
-            // Default Discovery Screen: Trending Hashtags + Visual Grid
+        // Content
+        if (searchQuery.isBlank() && selectedTabIndex == 0) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Trending Section
+                // Trending section
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -223,7 +259,7 @@ fun ExploreScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.TrendingUp,
-                                contentDescription = "الترند",
+                                contentDescription = null,
                                 tint = AnimeGold,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -259,11 +295,7 @@ fun ExploreScreen(
                                             color = AnimeViolet
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = count,
-                                            fontSize = 10.sp,
-                                            color = AnimeTextMuted
-                                        )
+                                        Text(text = count, fontSize = 10.sp, color = AnimeTextMuted)
                                     }
                                 }
                             }
@@ -271,19 +303,16 @@ fun ExploreScreen(
                     }
                 }
 
-                // Visual Explore Gallery Header
+                // Visual content gallery
                 item {
                     Text(
-                        text = "استكشاف المحتوى المرئي والأعمال 🎨",
+                        text = "المحتوى المرئي والفنون المستكشفة 🎨",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = AnimeTextPrimary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                     )
-                }
 
-                // Visual Grid
-                item {
                     val visualArtItems = listOf(
                         Triple(R.drawable.anime_character_art_1791388984389, "سولو ليفلينغ", "🔥 890 إعجاب"),
                         Triple(R.drawable.anime_manga_art_1791388998934, "صدام العمالقة", "⚔️ 1.2K إعجاب"),
@@ -377,15 +406,164 @@ fun ExploreScreen(
                 contentPadding = PaddingValues(bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Channels results
-                if (selectedTabIndex == 0 || selectedTabIndex == 2) {
-                    if (matchedChannels.isNotEmpty()) {
+                // Users search results
+                if (selectedTabIndex == 0 || selectedTabIndex == 1) {
+                    if (matchedUsers.isNotEmpty()) {
                         item {
                             Text(
-                                text = "النوادي والقنوات (${matchedChannels.size})",
+                                text = "المستخدمون والأوتاكو (${matchedUsers.size}) 👥",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = AnimeCyan,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(matchedUsers, key = { it.userId }) { user ->
+                            val isFollowing = currentUserProfile?.following?.contains(user.userId) == true
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                                border = BorderStroke(1.dp, AnimeBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AnimeAvatar(
+                                        avatarUrl = user.avatarUrl,
+                                        displayName = user.displayName,
+                                        size = 46
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = user.displayName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = AnimeTextPrimary
+                                        )
+                                        Text(
+                                            text = "@${user.username} • ${user.favoriteAnime}",
+                                            fontSize = 11.sp,
+                                            color = AnimeGold
+                                        )
+                                        Text(
+                                            text = user.bio,
+                                            fontSize = 11.sp,
+                                            color = AnimeTextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    // Follow / Unfollow button
+                                    Button(
+                                        onClick = { onFollowToggle(user.userId) },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isFollowing) AnimeCardSurfaceHover else AnimeCrimson
+                                        ),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isFollowing) "متابَع ✓" else "+ متابعة",
+                                            fontSize = 11.sp,
+                                            color = Color.White
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    // Friend request button
+                                    IconButton(
+                                        onClick = {
+                                            onSendFriendRequest(user.userId)
+                                            Toast.makeText(context, "تم إرسال طلب الصداقة! 🤝", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(AnimeViolet.copy(alpha = 0.2f))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PersonAdd,
+                                            contentDescription = "صداقة",
+                                            tint = AnimeViolet,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Anime Series search results
+                if (selectedTabIndex == 0 || selectedTabIndex == 2) {
+                    if (matchedAnimeSeries.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "الأنمي والسلاسل (${matchedAnimeSeries.size}) 🎬",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeGold,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(matchedAnimeSeries) { (animeName, genres) ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSearchQueryChange(animeName.substringBefore(" ")) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                                border = BorderStroke(1.dp, AnimeBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Movie,
+                                        contentDescription = null,
+                                        tint = AnimeGold,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = animeName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = AnimeTextPrimary
+                                        )
+                                        Text(
+                                            text = "التصنيف: $genres",
+                                            fontSize = 11.sp,
+                                            color = AnimeTextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Channels & Groups search results
+                if (selectedTabIndex == 0 || selectedTabIndex == 4) {
+                    if (matchedChannels.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "النوادي والقنوات (${matchedChannels.size}) 🛡️",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = AnimeViolet,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
@@ -402,19 +580,12 @@ fun ExploreScreen(
                                     modifier = Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(AnimeViolet.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Groups,
-                                            contentDescription = null,
-                                            tint = AnimeViolet
-                                        )
-                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.Groups,
+                                        contentDescription = null,
+                                        tint = AnimeViolet,
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
@@ -435,12 +606,12 @@ fun ExploreScreen(
                     }
                 }
 
-                // Posts results
-                if (selectedTabIndex == 0 || selectedTabIndex == 1) {
+                // Posts search results
+                if (selectedTabIndex == 0 || selectedTabIndex == 3) {
                     if (matchedPosts.isNotEmpty()) {
                         item {
                             Text(
-                                text = "المنشورات والمحتوى المرئي (${matchedPosts.size})",
+                                text = "المحتوى والمنشورات (${matchedPosts.size}) 📝",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeCrimson,
@@ -497,8 +668,8 @@ fun ExploreScreen(
                     }
                 }
 
-                // If no results matched
-                if (matchedPosts.isEmpty() && matchedChannels.isEmpty()) {
+                // If nothing found
+                if (matchedUsers.isEmpty() && matchedPosts.isEmpty() && matchedChannels.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -513,12 +684,6 @@ fun ExploreScreen(
                                     text = "لم يتم العثور على نتائج لـ \"$trimmedQuery\"",
                                     color = AnimeTextSecondary,
                                     fontSize = 14.sp
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "جرب البحث باسم أنمي آخر أو وسم مختلف",
-                                    color = AnimeTextMuted,
-                                    fontSize = 12.sp
                                 )
                             }
                         }

@@ -32,16 +32,22 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,8 +65,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
+import com.example.data.model.LiveStream
 import com.example.data.model.Post
 import com.example.data.model.Story
+import com.example.data.model.UserProfile
 import com.example.ui.components.AddStoryButton
 import com.example.ui.components.AnimeAvatar
 import com.example.ui.components.AnimeStoryCircle
@@ -82,24 +90,30 @@ import java.util.Locale
 fun FeedScreen(
     posts: List<Post>,
     stories: List<Story>,
+    liveStreams: List<LiveStream>,
+    currentUserProfile: UserProfile?,
     currentUserId: String,
     onLikeClick: (String) -> Unit,
     onCommentClick: (Post) -> Unit,
+    onReShareClick: (String) -> Unit,
     onStoryClick: (Story) -> Unit,
+    onLiveStreamClick: (LiveStream) -> Unit,
+    onStartLiveClick: () -> Unit,
     onAddStoryClick: () -> Unit,
     onCreatePostClick: () -> Unit
 ) {
     val context = LocalContext.current
-    var selectedCategory by remember { mutableStateOf("الكل") }
-    val categories = listOf("الكل", "شونين", "مانجا", "اقتباسات", "أخبار", "نظريات")
+    var selectedFeedTabIndex by remember { mutableIntStateOf(0) }
+    val feedTabs = listOf("الكل", "الأصدقاء والمتابعون", "أخبار الأنمي", "المجموعات")
 
-    // Filter posts based on category
-    val filteredPosts = remember(posts, selectedCategory) {
-        if (selectedCategory == "الكل") posts
-        else posts.filter { post ->
-            post.tags.any { it.contains(selectedCategory) } ||
-            post.content.contains(selectedCategory) ||
-            post.animeTitle.contains(selectedCategory)
+    val friendsAndFollowing = currentUserProfile?.following.orEmpty() + currentUserProfile?.friends.orEmpty()
+
+    val filteredPosts = remember(posts, selectedFeedTabIndex, friendsAndFollowing) {
+        when (selectedFeedTabIndex) {
+            1 -> posts.filter { friendsAndFollowing.contains(it.authorId) || it.authorId == currentUserId }
+            2 -> posts.filter { it.isNews || it.mediaType == "NEWS" || it.animeTitle.contains("أخبار") || it.tags.contains("أخبار") }
+            3 -> posts.filter { it.groupId.isNotEmpty() || it.authorRole.contains("كلان") || it.authorRole.contains("قائد") }
+            else -> posts
         }
     }
 
@@ -110,19 +124,146 @@ fun FeedScreen(
                 .testTag("feed_posts_list"),
             contentPadding = PaddingValues(bottom = 90.dp)
         ) {
+            // Live Streams Bar (if any or prompt to start)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(AnimeCrimson)
+                        )
+                        Text(
+                            text = "البثوث المباشرة للأنمي 🔴",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = AnimeTextPrimary
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AnimeCrimson.copy(alpha = 0.15f))
+                            .clickable { onStartLiveClick() }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = null,
+                                tint = AnimeCrimson,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "بدء بث مباشر",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AnimeCrimson
+                            )
+                        }
+                    }
+                }
+
+                if (liveStreams.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(liveStreams, key = { it.id }) { stream ->
+                            Card(
+                                modifier = Modifier
+                                    .width(220.dp)
+                                    .height(100.dp)
+                                    .clickable { onLiveStreamClick(stream) },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                                border = BorderStroke(1.dp, AnimeCrimson)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.anime_manga_art_1791388998934),
+                                        contentDescription = stream.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black.copy(alpha = 0.65f))
+                                    )
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(10.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(AnimeCrimson)
+                                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "🔴 مباشر",
+                                                    color = Color.White,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Text(
+                                                text = "👁️ ${stream.viewersCount}",
+                                                color = Color.White,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+
+                                        Text(
+                                            text = stream.title,
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Stories Carousel
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)
+                        .padding(vertical = 10.dp)
                 ) {
                     Text(
-                        text = "قصص الأوتاكو ⚡",
+                        text = "قصص وحالات الأوتاكو ⚡",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         color = AnimeTextPrimary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
 
                     LazyRow(
@@ -143,36 +284,40 @@ fun FeedScreen(
                 }
             }
 
-            // Categories Filter Chips
+            // Feed Navigation Tabs
             item {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ScrollableTabRow(
+                    selectedTabIndex = selectedFeedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = AnimeCrimson,
+                    edgePadding = 16.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedFeedTabIndex]),
+                            color = AnimeCrimson
+                        )
+                    },
+                    divider = {}
                 ) {
-                    items(categories) { cat ->
-                        val isSelected = selectedCategory == cat
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) AnimeCrimson else AnimeCardSurface)
-                                .clickable { selectedCategory = cat }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                text = cat,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.White else AnimeTextSecondary
-                            )
-                        }
+                    feedTabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedFeedTabIndex == index,
+                            onClick = { selectedFeedTabIndex = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selectedFeedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedFeedTabIndex == index) AnimeCrimson else AnimeTextSecondary
+                                )
+                            }
+                        )
                     }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Empty state if no posts
+            // Posts list
             if (filteredPosts.isEmpty()) {
                 item {
                     Box(
@@ -185,16 +330,16 @@ fun FeedScreen(
                             Text(text = "⚔️", fontSize = 48.sp)
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "لا توجد منشورات في هذا القسم بعد",
+                                text = "لا توجد منشورات في هذا القسم حالياً",
                                 color = AnimeTextSecondary,
-                                fontSize = 15.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "كن أول من ينشر في بلاك انمي!",
+                                text = "كن أول من ينشر أو تابع أصدقاء جدد!",
                                 color = AnimeCrimson,
-                                fontSize = 13.sp
+                                fontSize = 12.sp
                             )
                         }
                     }
@@ -206,15 +351,19 @@ fun FeedScreen(
                         currentUserId = currentUserId,
                         onLikeClick = { onLikeClick(post.id) },
                         onCommentClick = { onCommentClick(post) },
+                        onReShareClick = {
+                            onReShareClick(post.id)
+                            Toast.makeText(context, "تمت إعادة مشاركة المنشور بنجاح! 🔁", Toast.LENGTH_SHORT).show()
+                        },
                         onShareClick = {
-                            Toast.makeText(context, "تم نسخ رابط المنشور بنجاح! 🔥", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "تم نسخ رابط المنشور! 🔥", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
             }
         }
 
-        // FAB to create a post
+        // Floating Action Button to create post
         FloatingActionButton(
             onClick = onCreatePostClick,
             modifier = Modifier
@@ -246,6 +395,7 @@ fun AnimePostCard(
     currentUserId: String,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
+    onReShareClick: () -> Unit,
     onShareClick: () -> Unit
 ) {
     val isLiked = post.likedBy.contains(currentUserId)
@@ -267,7 +417,7 @@ fun AnimePostCard(
         border = BorderStroke(1.dp, AnimeBorder)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Post Header
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -292,7 +442,6 @@ fun AnimePostCard(
                                 color = AnimeTextPrimary
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            // Badge role
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
@@ -316,7 +465,6 @@ fun AnimePostCard(
                     }
                 }
 
-                // Anime Tag Pill
                 if (post.animeTitle.isNotEmpty()) {
                     Box(
                         modifier = Modifier
@@ -337,7 +485,7 @@ fun AnimePostCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Post Content Text
+            // Content Text
             Text(
                 text = post.content,
                 fontSize = 14.sp,
@@ -346,7 +494,6 @@ fun AnimePostCard(
                 fontWeight = FontWeight.Normal
             )
 
-            // Tags
             if (post.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -361,7 +508,7 @@ fun AnimePostCard(
                 }
             }
 
-            // Post Visual Artwork / Media
+            // Media
             Spacer(modifier = Modifier.height(12.dp))
             Box(
                 modifier = Modifier
@@ -404,7 +551,6 @@ fun AnimePostCard(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            // Alternate default art based on post id
                             val defaultRes = if (post.id.hashCode() % 2 == 0)
                                 R.drawable.anime_character_art_1791388984389
                             else
@@ -422,7 +568,7 @@ fun AnimePostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Action Buttons Bar
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -432,7 +578,7 @@ fun AnimePostCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Like button
+                    // Like
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -455,7 +601,7 @@ fun AnimePostCard(
                         )
                     }
 
-                    // Comments button
+                    // Comments
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -478,7 +624,28 @@ fun AnimePostCard(
                         )
                     }
 
-                    // Share button
+                    // Re-share
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable { onReShareClick() }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Repeat,
+                            contentDescription = "إعادة مشاركة",
+                            tint = AnimeTextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = post.sharesCount.toString(),
+                            fontSize = 13.sp,
+                            color = AnimeTextSecondary
+                        )
+                    }
+
+                    // Share link
                     IconButton(
                         onClick = onShareClick,
                         modifier = Modifier.size(32.dp)
@@ -492,7 +659,7 @@ fun AnimePostCard(
                     }
                 }
 
-                // Bookmark / Save button
+                // Bookmark
                 IconButton(
                     onClick = { isSaved = !isSaved },
                     modifier = Modifier.size(32.dp)

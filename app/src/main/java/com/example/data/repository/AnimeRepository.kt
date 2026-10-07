@@ -5,6 +5,9 @@ import android.util.Log
 import com.example.R
 import com.example.data.model.Channel
 import com.example.data.model.Comment
+import com.example.data.model.FriendRequest
+import com.example.data.model.LiveComment
+import com.example.data.model.LiveStream
 import com.example.data.model.Message
 import com.example.data.model.NotificationItem
 import com.example.data.model.Post
@@ -24,7 +27,6 @@ private const val TAG = "AnimeRepository"
 class AnimeRepository(
     private val db: FirebaseFirestore
 ) {
-    // Secondary constructor to resolve databaseId safely
     constructor(context: Context) : this(
         FirebaseFirestore.getInstance(
             context.applicationContext.getString(R.string.firestore_database_id)
@@ -62,13 +64,80 @@ class AnimeRepository(
             .map { it.toObject(UserProfile::class.java) }
     }
 
+    fun observeAllUsers(): Flow<List<UserProfile>> {
+        return db.collection("users")
+            .limit(30)
+            .snapshots()
+            .map { it.toObjects(UserProfile::class.java) }
+    }
+
     suspend fun updateUserProfile(profile: UserProfile) {
         db.collection("users").document(profile.userId)
             .set(profile)
             .await()
     }
 
-    // Posts
+    // Follow / Unfollow System
+    suspend fun followUser(currentUserId: String, targetUserId: String) {
+        if (currentUserId == targetUserId) return
+        db.runTransaction { transaction ->
+            val currentUserRef = db.collection("users").document(currentUserId)
+            val targetUserRef = db.collection("users").document(targetUserId)
+
+            transaction.update(currentUserRef, "following", FieldValue.arrayUnion(targetUserId))
+            transaction.update(currentUserRef, "followingCount", FieldValue.increment(1))
+
+            transaction.update(targetUserRef, "followers", FieldValue.arrayUnion(currentUserId))
+            transaction.update(targetUserRef, "followersCount", FieldValue.increment(1))
+        }.await()
+    }
+
+    suspend fun unfollowUser(currentUserId: String, targetUserId: String) {
+        db.runTransaction { transaction ->
+            val currentUserRef = db.collection("users").document(currentUserId)
+            val targetUserRef = db.collection("users").document(targetUserId)
+
+            transaction.update(currentUserRef, "following", FieldValue.arrayRemove(targetUserId))
+            transaction.update(currentUserRef, "followingCount", FieldValue.increment(-1))
+
+            transaction.update(targetUserRef, "followers", FieldValue.arrayRemove(currentUserId))
+            transaction.update(targetUserRef, "followersCount", FieldValue.increment(-1))
+        }.await()
+    }
+
+    // Friend Requests System
+    fun observeFriendRequests(userId: String): Flow<List<FriendRequest>> {
+        return db.collection("friend_requests")
+            .whereEqualTo("receiverId", userId)
+            .whereEqualTo("status", "PENDING")
+            .snapshots()
+            .map { it.toObjects(FriendRequest::class.java) }
+    }
+
+    suspend fun sendFriendRequest(request: FriendRequest) {
+        val docRef = db.collection("friend_requests").document()
+        docRef.set(request.copy(id = docRef.id)).await()
+    }
+
+    suspend fun respondToFriendRequest(requestId: String, accept: Boolean, senderId: String, receiverId: String) {
+        val status = if (accept) "ACCEPTED" else "DECLINED"
+        db.collection("friend_requests").document(requestId).update("status", status).await()
+
+        if (accept) {
+            // Add mutual friends
+            db.collection("users").document(senderId).update(
+                "friends", FieldValue.arrayUnion(receiverId),
+                "friendsCount", FieldValue.increment(1)
+            ).await()
+
+            db.collection("users").document(receiverId).update(
+                "friends", FieldValue.arrayUnion(senderId),
+                "friendsCount", FieldValue.increment(1)
+            ).await()
+        }
+    }
+
+    // Posts & Feed
     fun observePosts(): Flow<List<Post>> {
         return db.collection("posts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -83,7 +152,6 @@ class AnimeRepository(
         val finalPost = post.copy(id = docRef.id)
         docRef.set(finalPost).await()
 
-        // Increment user post count
         try {
             db.collection("users").document(post.authorId)
                 .update("postsCount", FieldValue.increment(1))
@@ -113,6 +181,12 @@ class AnimeRepository(
             transaction.update(docRef, "likedBy", likedList)
             transaction.update(docRef, "likesCount", newLikesCount)
         }.await()
+    }
+
+    suspend fun reSharePost(postId: String) {
+        db.collection("posts").document(postId)
+            .update("sharesCount", FieldValue.increment(1))
+            .await()
     }
 
     // Comments
@@ -147,7 +221,50 @@ class AnimeRepository(
         docRef.set(finalStory).await()
     }
 
-    // Channels / Anime Clubs
+    // Live Streaming
+    fun observeLiveStreams(): Flow<List<LiveStream>> {
+        return db.collection("live_streams")
+            .whereEqualTo("isLive", true)
+            .orderBy("startedAt", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { it.toObjects(LiveStream::class.java) }
+    }
+
+    suspend fun startLiveStream(stream: LiveStream): String {
+        val docRef = db.collection("live_streams").document()
+        val finalStream = stream.copy(id = docRef.id)
+        docRef.set(finalStream).await()
+        return docRef.id
+    }
+
+    suspend fun updateLiveControls(streamId: String, isMuted: Boolean, isCameraOff: Boolean) {
+        db.collection("live_streams").document(streamId).update(
+            "isMuted", isMuted,
+            "isCameraOff", isCameraOff
+        ).await()
+    }
+
+    suspend fun endLiveStream(streamId: String) {
+        db.collection("live_streams").document(streamId).update(
+            "isLive", false
+        ).await()
+    }
+
+    fun observeLiveComments(streamId: String): Flow<List<LiveComment>> {
+        return db.collection("live_streams").document(streamId)
+            .collection("comments")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .snapshots()
+            .map { it.toObjects(LiveComment::class.java) }
+    }
+
+    suspend fun sendLiveComment(comment: LiveComment) {
+        val docRef = db.collection("live_streams").document(comment.streamId)
+            .collection("comments").document()
+        docRef.set(comment.copy(id = docRef.id)).await()
+    }
+
+    // Channels & Groups
     fun observeChannels(): Flow<List<Channel>> {
         return db.collection("channels")
             .orderBy("lastMessageTime", Query.Direction.DESCENDING)
@@ -220,65 +337,154 @@ class AnimeRepository(
         batch.commit().await()
     }
 
-    suspend fun sendNotification(notification: NotificationItem) {
-        val docRef = db.collection("notifications").document()
-        docRef.set(notification.copy(id = docRef.id)).await()
+    // Reels
+    fun observeReels(): Flow<List<com.example.data.model.ReelItem>> {
+        return db.collection("reels")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { it.toObjects(com.example.data.model.ReelItem::class.java) }
     }
 
-    // Seed default content if the database is newly created
+    suspend fun createReel(reel: com.example.data.model.ReelItem) {
+        val docRef = db.collection("reels").document()
+        docRef.set(reel.copy(id = docRef.id)).await()
+    }
+
+    suspend fun toggleLikeReel(reelId: String, userId: String) {
+        val docRef = db.collection("reels").document(reelId)
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val reel = snapshot.toObject(com.example.data.model.ReelItem::class.java) ?: return@runTransaction
+            val liked = reel.likedBy.toMutableList()
+            val newCount = if (liked.contains(userId)) {
+                liked.remove(userId)
+                (reel.likesCount - 1).coerceAtLeast(0L)
+            } else {
+                liked.add(userId)
+                reel.likesCount + 1
+            }
+            transaction.update(docRef, "likedBy", liked)
+            transaction.update(docRef, "likesCount", newCount)
+        }.await()
+    }
+
+    // Economy & Games Profile
+    suspend fun getOrCreateEconomyProfile(userId: String): com.example.data.model.EconomyProfile {
+        val docRef = db.collection("economy_profiles").document(userId)
+        val snap = docRef.get().await()
+        if (snap.exists()) {
+            val prof = snap.toObject(com.example.data.model.EconomyProfile::class.java)
+            if (prof != null) return prof
+        }
+        val newProf = com.example.data.model.EconomyProfile(userId = userId)
+        docRef.set(newProf).await()
+        return newProf
+    }
+
+    suspend fun claimDailyReward(userId: String): com.example.data.model.EconomyProfile {
+        val docRef = db.collection("economy_profiles").document(userId)
+        val snap = docRef.get().await()
+        val current = snap.toObject(com.example.data.model.EconomyProfile::class.java) ?: com.example.data.model.EconomyProfile(userId = userId)
+        val updated = current.copy(
+            coins = current.coins + 150L,
+            gems = current.gems + 10L,
+            xp = current.xp + 50L,
+            dailyStreak = current.dailyStreak + 1,
+            lastDailyRewardTimestamp = System.currentTimeMillis()
+        )
+        docRef.set(updated).await()
+        return updated
+    }
+
+    // Anime Wiki
+    fun observeAnimeWiki(): Flow<List<com.example.data.model.AnimeWikiItem>> {
+        return db.collection("anime_wiki")
+            .snapshots()
+            .map { it.toObjects(com.example.data.model.AnimeWikiItem::class.java) }
+    }
+
+    // Reports (Admin & Moderation)
+    suspend fun submitReport(report: com.example.data.model.ReportItem) {
+        val docRef = db.collection("reports").document()
+        docRef.set(report.copy(id = docRef.id)).await()
+    }
+
+    fun observeReports(): Flow<List<com.example.data.model.ReportItem>> {
+        return db.collection("reports")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { it.toObjects(com.example.data.model.ReportItem::class.java) }
+    }
+
+    // Seed default content
     suspend fun seedInitialContentIfEmpty(currentUser: FirebaseUser) {
         try {
             val postsSnapshot = db.collection("posts").limit(1).get().await()
             if (postsSnapshot.isEmpty) {
                 Log.d(TAG, "Seeding initial anime posts and channels...")
 
-                // Create initial channels
+                // Create initial channels with series & types
                 val initialChannels = listOf(
                     Channel(
                         id = "channel_shonen",
                         title = "🔥 مجلس الشونين الأسطوري",
                         description = "نقاشات حامية حول ون بيس، جوجوتسو كايسن، دراغون بول وهجوم العمالقة",
-                        animeCategory = "شونين وقتالات",
+                        animeCategory = "مجموعة عامة",
+                        animeSeries = "شونين عام",
+                        isBroadcastOnly = false,
+                        isPrivate = false,
                         memberCount = 1240L,
+                        admins = listOf(currentUser.uid),
                         createdBy = currentUser.uid,
                         lastMessageText = "من يتفق أن آرك الشيبويا هو الأفضل؟ 🔥",
                         lastMessageTime = System.currentTimeMillis() - 100000
                     ),
                     Channel(
-                        id = "channel_news",
-                        title = "⚡ أخبار وتسريبات الأنمي",
-                        description = "مواعيد صدور المواسم القادمة، إعلانات الاستوديوهات والمقاطع الدعائية",
-                        animeCategory = "أخبار رسمية",
-                        memberCount = 3450L,
+                        id = "channel_news_broadcast",
+                        title = "⚡ قناة أخبار وتسريبات الأنمي الرسمية",
+                        description = "قناة بث رسمية لمواعيد صدور المواسم القادمة وإعلانات الاستوديوهات",
+                        animeCategory = "قناة بث",
+                        animeSeries = "أخبار الأنمي",
+                        isBroadcastOnly = true,
+                        isPrivate = false,
+                        memberCount = 4520L,
+                        admins = listOf(currentUser.uid),
                         createdBy = currentUser.uid,
-                        lastMessageText = "رسمياً: الإعلان عن موعد الجزء القادم!",
+                        lastMessageText = "عاجل: الإعلان عن موعد الموسم الجديد رسمياً!",
                         lastMessageTime = System.currentTimeMillis() - 50000
                     ),
                     Channel(
-                        id = "channel_manga",
-                        title = "📖 ديوانية المانجاكا والنظريات",
-                        description = "تحليلات فصول المانجا الأسبوعية وتوقعات الأحداث المستقبلية (تحذير حرق)",
-                        animeCategory = "مانجا ونظريات",
-                        memberCount = 890L,
+                        id = "channel_aot",
+                        title = "⚔️ فيلق استطلاع هجوم العمالقة",
+                        description = "غرفة محادثة خاصة بمحبي سلسلة Attack on Titan والتحليلات العميقة",
+                        animeCategory = "سلسلة أنمي",
+                        animeSeries = "هجوم العمالقة",
+                        isBroadcastOnly = false,
+                        isPrivate = false,
+                        memberCount = 2890L,
+                        admins = listOf(currentUser.uid),
                         createdBy = currentUser.uid,
-                        lastMessageText = "الفصل القادم سيقلب كل الموازين!",
-                        lastMessageTime = System.currentTimeMillis() - 300000
+                        lastMessageText = "ما رأيكم في ختام القصة ونهاية إرين؟",
+                        lastMessageTime = System.currentTimeMillis() - 200000
                     ),
                     Channel(
-                        id = "channel_recommendations",
-                        title = "🍿 ترشيحات وتوصيات الموسم",
-                        description = "أفضل أعمال الموسم الجديد وأنيميات مظلومة تستحق المشاهدة",
-                        animeCategory = "توصيات ومراجعات",
-                        memberCount = 2100L,
+                        id = "channel_onepiece",
+                        title = "🍖 طاقم قبعة القش (ون بيس)",
+                        description = "مناقشة فصول المانجا الأسبوعية وسر القرن الغائب والـ One Piece",
+                        animeCategory = "سلسلة أنمي",
+                        animeSeries = "ون بيس",
+                        isBroadcastOnly = false,
+                        isPrivate = false,
+                        memberCount = 3710L,
+                        admins = listOf(currentUser.uid),
                         createdBy = currentUser.uid,
-                        lastMessageText = "ما هو أفضل أنمي شاهدته هذا الشهر؟",
-                        lastMessageTime = System.currentTimeMillis() - 600000
+                        lastMessageText = "من ينتظر ظهور شانكس القادم؟",
+                        lastMessageTime = System.currentTimeMillis() - 400000
                     )
                 )
 
                 for (ch in initialChannels) {
                     db.collection("channels").document(ch.id).set(ch).await()
-                    // Add sample message
                     db.collection("channels").document(ch.id).collection("messages").document().set(
                         Message(
                             channelId = ch.id,
@@ -291,7 +497,7 @@ class AnimeRepository(
                     ).await()
                 }
 
-                // Create initial posts
+                // Initial posts (including news, groups, and character posts)
                 val initialPosts = listOf(
                     Post(
                         id = "post_1",
@@ -301,38 +507,39 @@ class AnimeRepository(
                         content = "الخيار الوحيد هو المضي قدماً بلا ندم. شاركوني ما هي أفضل مقولة أثرت فيكم في عالم الأنمي؟ ⚔️🔥",
                         animeTitle = "هجوم العمالقة",
                         tags = listOf("هجوم_العمالقة", "شونين", "اقتباسات", "أساطير"),
-                        likesCount = 42L,
-                        likedBy = emptyList(),
-                        commentsCount = 8L,
+                        likesCount = 54L,
+                        sharesCount = 12L,
+                        mediaUrl = "character",
                         mediaType = "IMAGE",
                         createdAt = System.currentTimeMillis() - 3600000
                     ),
                     Post(
                         id = "post_2",
-                        authorId = currentUser.uid,
-                        authorName = "غوجو ساتورو",
-                        authorRole = "الساحر الأقوى",
-                        content = "التوسع في المجال: الفراغ اللانهائي! 🔥✨ ما رأيكم في تحريك الملحمة الأخيرة؟ استوديو مابا تفوق على نفسه!",
+                        authorId = "news_bot",
+                        authorName = "أخبار الأنمي الرسمية",
+                        authorRole = "موثق ⚡",
+                        content = "رسمياً: استوديو مابا يعلن عن إنتاج موسم جديد ومميز قادم في خريف 2026 مع تحسينات بصرية ضخمة! 🍿✨",
                         animeTitle = "جوجوتسو كايسن",
-                        tags = listOf("جوجوتسو_كايسن", "غوجو", "مابا", "قتالات"),
-                        likesCount = 89L,
-                        likedBy = emptyList(),
-                        commentsCount = 15L,
-                        mediaType = "IMAGE",
+                        tags = listOf("أخبار", "مابا", "جوجوتسو_كايسن"),
+                        likesCount = 112L,
+                        sharesCount = 38L,
+                        mediaUrl = "banner",
+                        mediaType = "NEWS",
+                        isNews = true,
                         createdAt = System.currentTimeMillis() - 7200000
                     ),
                     Post(
                         id = "post_3",
                         authorId = currentUser.uid,
-                        authorName = "مونكي دي لوفي",
-                        authorRole = "ملك القراصنة القادم",
-                        content = "لن أستسلم حتى أصل إلى قمة العالم مع طاقمي! من ينتظر حلقة هذا الأسبوع؟ 🍖🏴‍☠️",
-                        animeTitle = "ون بيس",
-                        tags = listOf("ون_بيس", "لوفي", "إييتشيرو_أودا", "مغامرات"),
-                        likesCount = 135L,
-                        likedBy = emptyList(),
-                        commentsCount = 22L,
-                        mediaType = "DISCUSSION",
+                        authorName = "سون غوكو",
+                        authorRole = "محارب السايان",
+                        content = "لا يوجد سقف للقوة عندما تتدرب بقلب نقي لحماية أصدقائك! من متحمس لأقوى قتالات الموسم؟ 💥👊",
+                        animeTitle = "دراغون بول",
+                        tags = listOf("دراغون_بول", "غوكو", "قتالات"),
+                        likesCount = 85L,
+                        sharesCount = 20L,
+                        mediaUrl = "battle",
+                        mediaType = "IMAGE",
                         createdAt = System.currentTimeMillis() - 10800000
                     )
                 )
@@ -341,14 +548,61 @@ class AnimeRepository(
                     db.collection("posts").document(p.id).set(p).await()
                 }
 
-                // Initial welcome notification
+                // Initial Live Stream sample
+                db.collection("live_streams").document("stream_sample_1").set(
+                    LiveStream(
+                        id = "stream_sample_1",
+                        hostId = currentUser.uid,
+                        hostName = currentUser.displayName ?: "قائد الأوتاكو",
+                        hostAvatarUrl = currentUser.photoUrl?.toString() ?: "",
+                        title = "🔴 مناقشة حية: تحليل أهم أحداث فصول ون بيس وجوجوتسو!",
+                        animeTopic = "ون بيس وجوجوتسو كايسن",
+                        viewersCount = 142L,
+                        isLive = true,
+                        previewImage = "banner",
+                        startedAt = System.currentTimeMillis()
+                    )
+                ).await()
+
+                // Initial Reels
+                val initialReels = listOf(
+                    com.example.data.model.ReelItem(
+                        id = "reel_1",
+                        authorId = currentUser.uid,
+                        authorName = "ليفاي أكرمان",
+                        authorAvatarUrl = currentUser.photoUrl?.toString() ?: "",
+                        videoPreviewRes = "character",
+                        caption = "اللقطة الأسطورية ضد العملاق القرد بلا رحمة! ⚔️🔥",
+                        animeTitle = "هجوم العمالقة",
+                        likesCount = 1240L,
+                        commentsCount = 89L,
+                        sharesCount = 310L
+                    ),
+                    com.example.data.model.ReelItem(
+                        id = "reel_2",
+                        authorId = currentUser.uid,
+                        authorName = "غوجو ساتورو",
+                        authorAvatarUrl = currentUser.photoUrl?.toString() ?: "",
+                        videoPreviewRes = "battle",
+                        caption = "تفعيل تقنية الفراغ اللانهائي في ذروة القتال! ✨👁️",
+                        animeTitle = "جوجوتسو كايسن",
+                        likesCount = 2890L,
+                        commentsCount = 210L,
+                        sharesCount = 540L
+                    )
+                )
+                for (r in initialReels) {
+                    db.collection("reels").document(r.id).set(r).await()
+                }
+
+                // Welcome notification
                 db.collection("notifications").document().set(
                     NotificationItem(
                         recipientId = currentUser.uid,
                         senderId = "system_blackanime",
                         senderName = "بلاك انمي (الإدارة)",
                         title = "أهلاً بك في بلاك انمي! 🖤🔥",
-                        message = "مرحباً بك في أضخم مجتمع عربي للأنمي والمانجا. استكشف القنوات وشارك منشوراتك الآن!",
+                        message = "مرحباً بك في أضخم مجتمع عربي للأنمي والمانجا. استكشف القنوات، والبثوث المباشرة وشارك منشوراتك الآن!",
                         type = "ANNOUNCEMENT",
                         isRead = false,
                         createdAt = System.currentTimeMillis()

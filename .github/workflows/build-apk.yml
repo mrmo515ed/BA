@@ -1,9 +1,12 @@
-name: Build Black Anime APK
+name: Build & Release Black Anime APK
 
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -18,17 +21,38 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew || true
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.11.1'
 
     - name: Build APK with Gradle
-      run: gradle assembleDebug
+      run: |
+        if [ -f "./gradlew" ]; then
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+        else
+          gradle assembleDebug --no-daemon
+        fi
 
-    - name: Upload APK Artifact
+    - name: Upload APK as Workflow Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: BlackAnime-Debug-APK
-        path: app/build/outputs/apk/debug/*.apk
-        retention-days: 14
+        name: BlackAnime-app-debug-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+
+    - name: Create or Update GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: success()
+      with:
+        tag_name: v1.0.0-latest
+        name: "Black Anime v1.0.0 (Latest Build)"
+        body: |
+          ### 🚀 بلاك انمي (Black Anime) - Latest Release
+          - تم بناء ملف الـ APK التلقائي بنجاح.
+          - حمل التطبيق مباشرة عبر الرابط المرفق بالأسفل `app-debug.apk`.
+        files: app/build/outputs/apk/debug/app-debug.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

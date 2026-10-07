@@ -16,20 +16,32 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +57,7 @@ import com.example.ui.theme.AnimeBorder
 import com.example.ui.theme.AnimeCardSurface
 import com.example.ui.theme.AnimeCardSurfaceHover
 import com.example.ui.theme.AnimeCrimson
+import com.example.ui.theme.AnimeCyan
 import com.example.ui.theme.AnimeGold
 import com.example.ui.theme.AnimeTextMuted
 import com.example.ui.theme.AnimeTextPrimary
@@ -54,9 +67,22 @@ import com.example.ui.theme.AnimeViolet
 @Composable
 fun ChannelsScreen(
     channels: List<Channel>,
+    currentUserId: String,
     onChannelClick: (Channel) -> Unit,
     onCreateChannelClick: () -> Unit
 ) {
+    var selectedFilterIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("الكل", "غرف سلاسل الأنمي", "قنوات البث", "مجموعات النقاش")
+
+    val filteredChannels = remember(channels, selectedFilterIndex) {
+        when (selectedFilterIndex) {
+            1 -> channels.filter { it.animeSeries != "عام" || it.animeCategory.contains("سلسلة") }
+            2 -> channels.filter { it.isBroadcastOnly }
+            3 -> channels.filter { !it.isBroadcastOnly }
+            else -> channels
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -68,21 +94,53 @@ fun ChannelsScreen(
             item {
                 Column(modifier = Modifier.padding(bottom = 6.dp)) {
                     Text(
-                        text = "نوادي وقنوات الأنمي الكبرى 🛡️",
+                        text = "نوادي، قنوات وغرف الأنمي 🛡️",
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = AnimeTextPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "انضم إلى غرف المحادثة الحية وناقش حلقات وفصول الأنمي مباشرة",
+                        text = "انضم إلى غرف سلاسل الأنمي، قنوات البث الرسمية، أو أسس مجموعتك الخاصة",
                         fontSize = 12.sp,
                         color = AnimeTextSecondary
                     )
                 }
             }
 
-            if (channels.isEmpty()) {
+            // Filters TabRow
+            item {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedFilterIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = AnimeViolet,
+                    edgePadding = 0.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedFilterIndex]),
+                            color = AnimeViolet
+                        )
+                    },
+                    divider = {}
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedFilterIndex == index,
+                            onClick = { selectedFilterIndex = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selectedFilterIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedFilterIndex == index) AnimeViolet else AnimeTextSecondary
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (filteredChannels.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
@@ -94,30 +152,31 @@ fun ChannelsScreen(
                             Text(text = "💬", fontSize = 44.sp)
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "لا توجد قنوات أنمي متاحة حالياً",
+                                text = "لا توجد قنوات أو مجموعات في هذا القسم حالياً",
                                 color = AnimeTextSecondary,
                                 fontSize = 14.sp
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "كن أول من يؤسس نادياً للأنمي المفضل لديك!",
-                                color = AnimeCrimson,
+                                text = "ابدأ بإنشاء أول قناة بث أو غرفة أنمي!",
+                                color = AnimeViolet,
                                 fontSize = 12.sp
                             )
                         }
                     }
                 }
             } else {
-                items(channels, key = { it.id }) { channel ->
+                items(filteredChannels, key = { it.id }) { channel ->
                     ChannelCardItem(
                         channel = channel,
+                        currentUserId = currentUserId,
                         onClick = { onChannelClick(channel) }
                     )
                 }
             }
         }
 
-        // FAB to create a channel
+        // FAB to create a channel or group
         FloatingActionButton(
             onClick = onCreateChannelClick,
             modifier = Modifier
@@ -131,10 +190,10 @@ fun ChannelsScreen(
                 modifier = Modifier.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = "إنشاء نادي")
+                Icon(Icons.Default.Add, contentDescription = "إنشاء نادٍ / قناة")
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "إنشاء نادٍ",
+                    text = "إنشاء نادي/قناة",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -146,8 +205,11 @@ fun ChannelsScreen(
 @Composable
 fun ChannelCardItem(
     channel: Channel,
+    currentUserId: String,
     onClick: () -> Unit
 ) {
+    val isAdmin = channel.admins.contains(currentUserId) || channel.createdBy == currentUserId
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -155,7 +217,7 @@ fun ChannelCardItem(
             .testTag("channel_card_${channel.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
-        border = BorderStroke(1.dp, AnimeBorder)
+        border = BorderStroke(1.dp, if (channel.isBroadcastOnly) AnimeViolet.copy(alpha = 0.5f) else AnimeBorder)
     ) {
         Row(
             modifier = Modifier
@@ -163,21 +225,24 @@ fun ChannelCardItem(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Channel Avatar Icon
+            // Icon
             Box(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
-                            listOf(AnimeCrimson.copy(alpha = 0.8f), AnimeViolet.copy(alpha = 0.8f))
+                            if (channel.isBroadcastOnly)
+                                listOf(AnimeViolet, AnimeCrimson)
+                            else
+                                listOf(AnimeCyan.copy(alpha = 0.8f), AnimeViolet.copy(alpha = 0.8f))
                         )
                     )
                     .padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Forum,
+                    imageVector = if (channel.isBroadcastOnly) Icons.Default.Campaign else Icons.Default.Forum,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -186,7 +251,6 @@ fun ChannelCardItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Channel Info
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,30 +260,41 @@ fun ChannelCardItem(
                     Text(
                         text = channel.title,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         color = AnimeTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Category badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(AnimeCardSurfaceHover)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = channel.animeCategory,
-                            fontSize = 10.sp,
-                            color = AnimeGold,
-                            fontWeight = FontWeight.Medium
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (channel.isPrivate) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "خاصة",
+                                tint = AnimeGold,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+                        // Type Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(AnimeCardSurfaceHover)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (channel.isBroadcastOnly) "⚡ بث" else "💬 نقاش",
+                                fontSize = 10.sp,
+                                color = if (channel.isBroadcastOnly) AnimeViolet else AnimeCyan,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
                     text = channel.description,
@@ -236,7 +311,6 @@ fun ChannelCardItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Last message preview
                     Text(
                         text = "💬 ${channel.lastMessageText}",
                         fontSize = 11.sp,
@@ -246,22 +320,38 @@ fun ChannelCardItem(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Members count
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.People,
-                            contentDescription = null,
-                            tint = AnimeTextMuted,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "${channel.memberCount} عضو",
-                            fontSize = 10.sp,
-                            color = AnimeTextMuted
-                        )
+                        if (isAdmin) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.MilitaryTech,
+                                    contentDescription = "مسؤول",
+                                    tint = AnimeGold,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text("مسؤول", fontSize = 9.sp, color = AnimeGold)
+                            }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                                tint = AnimeTextMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "${channel.memberCount}",
+                                fontSize = 10.sp,
+                                color = AnimeTextMuted
+                            )
+                        }
                     }
                 }
             }
