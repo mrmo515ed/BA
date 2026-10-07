@@ -1,0 +1,6 @@
+{
+  "name": "بلاك انمي",
+  "description": "شبكة تواصل اجتماعي متكاملة لعشاق ومحبي الأنمي - منشورات، قصص، غرف محادثة، إشعارات، وبحث متقدم",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

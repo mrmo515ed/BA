@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Black Anime user profile details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "favoriteAnime": { "type": "string" },
+        "favoriteCharacter": { "type": "string" },
+        "role": { "type": "string" },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" },
+        "postsCount": { "type": "number" },
+        "joinedAt": { "type": "number" }
+      },
+      "required": ["userId", "username", "displayName"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Feed post, anime review, quote or artwork",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatarUrl": { "type": "string" },
+        "content": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "animeTitle": { "type": "string" },
+        "tags": { "type": "array" },
+        "likesCount": { "type": "number" },
+        "likedBy": { "type": "array" },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "authorId", "authorName", "content", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Post comment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatarUrl": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "postId", "authorId", "content", "createdAt"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "24h status story",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatarUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "animeTag": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "authorId", "authorName", "imageUrl", "createdAt"]
+    },
+    "Channel": {
+      "title": "Channel",
+      "description": "Anime club or chat channel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconUrl": { "type": "string" },
+        "animeCategory": { "type": "string" },
+        "memberCount": { "type": "number" },
+        "createdBy": { "type": "string" },
+        "lastMessageText": { "type": "string" },
+        "lastMessageTime": { "type": "number" }
+      },
+      "required": ["id", "title", "createdBy"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message inside channel or direct chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "channelId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatarUrl": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "channelId", "senderId", "content", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Instant user notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatarUrl": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "targetId": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "recipientId", "senderId", "title", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile collection"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "Feed posts collection"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Post comments subcollection"
+    },
+    "/stories/{storyId}": {
+      "schema": { "$ref": "#/entities/Story" },
+      "description": "Anime stories collection"
+    },
+    "/channels/{channelId}": {
+      "schema": { "$ref": "#/entities/Channel" },
+      "description": "Anime chat channels collection"
+    },
+    "/channels/{channelId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Channel messages collection"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User notifications collection"
+    }
+  }
+}
