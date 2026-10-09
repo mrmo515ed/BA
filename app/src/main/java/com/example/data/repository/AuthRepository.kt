@@ -20,18 +20,37 @@ import kotlinx.coroutines.tasks.await
 private const val TAG = "AuthRepository"
 
 class AuthRepository(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    firebaseAuth: FirebaseAuth? = null
 ) {
+    private val auth: FirebaseAuth by lazy {
+        firebaseAuth ?: FirebaseAuth.getInstance()
+    }
+
     val currentUser: FirebaseUser?
-        get() = auth.currentUser
+        get() = try {
+            auth.currentUser
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to access currentUser: ${e.message}")
+            null
+        }
 
     fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-            trySend(firebaseAuth.currentUser)
+        try {
+            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                trySend(firebaseAuth.currentUser)
+            }
+            auth.addAuthStateListener(listener)
+            trySend(currentUser)
+            awaitClose {
+                try {
+                    auth.removeAuthStateListener(listener)
+                } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error attaching auth state listener: ${e.message}", e)
+            trySend(null)
+            awaitClose {}
         }
-        auth.addAuthStateListener(listener)
-        trySend(auth.currentUser)
-        awaitClose { auth.removeAuthStateListener(listener) }
     }
 
     suspend fun signInWithGoogle(context: Context): Result<FirebaseUser> {

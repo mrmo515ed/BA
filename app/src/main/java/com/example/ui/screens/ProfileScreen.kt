@@ -23,14 +23,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -90,17 +95,19 @@ fun ProfileScreen(
     profile: UserProfile?,
     userPosts: List<Post>,
     friendRequests: List<FriendRequest>,
+    currentUserEmail: String? = null,
     onAcceptFriendRequest: (FriendRequest) -> Unit,
     onDeclineFriendRequest: (FriendRequest) -> Unit,
     onUpdateProfile: (displayName: String, bio: String, favAnime: String, favChar: String, role: String) -> Unit,
     onOpenEconomyClick: () -> Unit = {},
+    onOpenAdminClick: () -> Unit = {},
     onSignOutClick: () -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showUsersListDialogType by remember { mutableStateOf<String?>(null) } // "FRIENDS", "FOLLOWERS", "FOLLOWING"
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("المنشورات والأنشطة", "الأنمي المفضل", "الأوسمة")
+    val tabs = listOf("المنشورات والأنشطة", "الأنمي المفضل", "الأوسمة", "المزيد")
 
     val user = profile ?: UserProfile()
 
@@ -731,6 +738,181 @@ fun ProfileScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            3 -> {
+                // Tab 3: المزيد (More & Settings & Admin)
+                item {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val isUserAdmin = user.hasAdminPrivileges(currentUserEmail)
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // 1. ADMIN ENTRY (Red Floating / Action Card for m774545471@gmail.com / Admin)
+                        if (isUserAdmin) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenAdminClick() }
+                                    .testTag("admin_more_section_card"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF261214)),
+                                border = BorderStroke(1.5.dp, AnimeCrimson)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .clip(CircleShape)
+                                                .background(AnimeCrimson),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AdminPanelSettings,
+                                                contentDescription = "أيقونة الإدارة",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(26.dp)
+                                            )
+                                        }
+
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "لوحة تحكم الإدارة العليا",
+                                                    fontWeight = FontWeight.Black,
+                                                    fontSize = 15.sp,
+                                                    color = Color.White
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(AnimeGold)
+                                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(text = "ADMIN", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                                }
+                                            }
+                                            Text(
+                                                text = "إضافة أنميات • مراجعة البلاغات • حظر وفك حظر • سجل التدقيق",
+                                                fontSize = 11.sp,
+                                                color = AnimeCrimson,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = onOpenAdminClick,
+                                        colors = ButtonDefaults.buttonColors(containerColor = AnimeCrimson),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text("دخول الإدارة", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Settings Items
+                        Text(
+                            text = "الإعدادات العامة وتفضيلات التطبيق",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = AnimeTextPrimary,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+
+                        // Clear Cache
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    try {
+                                        val cacheDir = context.cacheDir.resolve("image_cache")
+                                        if (cacheDir.exists()) cacheDir.deleteRecursively()
+                                        android.widget.Toast.makeText(context, "تم تنظيف الذاكرة المؤقتة بنجاح 🧹", android.widget.Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "تم تنظيف الكاش", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                            border = BorderStroke(1.dp, AnimeBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Default.CleaningServices, contentDescription = null, tint = AnimeCyan, modifier = Modifier.size(20.dp))
+                                    Column {
+                                        Text("مسح الذاكرة المؤقتة (Clear Cache)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AnimeTextPrimary)
+                                        Text("تسريع التطبيق وتحرير مساحة التخزين الداخلية", fontSize = 11.sp, color = AnimeTextSecondary)
+                                    }
+                                }
+                                Text("تنظيف", fontSize = 11.sp, color = AnimeCyan, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // App Version & About
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                            border = BorderStroke(1.dp, AnimeBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Default.Info, contentDescription = null, tint = AnimeViolet, modifier = Modifier.size(20.dp))
+                                Column {
+                                    Text("بلاك انمي (Black Anime) الإصدار 1.0", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AnimeTextPrimary)
+                                    Text("أضخم منصة ومجتمع تواصل لعشاق الأنمي والمانجا في الوطن العربي 🖤🔥", fontSize = 11.sp, color = AnimeTextSecondary)
+                                }
+                            }
+                        }
+
+                        // Sign Out Button
+                        OutlinedButton(
+                            onClick = { showSignOutConfirm = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .padding(top = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, AnimeCrimson)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = AnimeCrimson, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("تسجيل الخروج من الحساب", color = AnimeCrimson, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }

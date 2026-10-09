@@ -52,7 +52,11 @@ class NetworkStatusMonitor(private val context: Context) {
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        connectivityManager.registerNetworkCallback(request, callback)
+        try {
+            connectivityManager.registerNetworkCallback(request, callback)
+        } catch (e: Exception) {
+            android.util.Log.w("NetworkStatusMonitor", "Failed to register network callback: ${e.message}")
+        }
 
         // Send initial state
         if (isOnline) {
@@ -62,7 +66,11 @@ class NetworkStatusMonitor(private val context: Context) {
         }
 
         awaitClose {
-            connectivityManager.unregisterNetworkCallback(callback)
+            try {
+                connectivityManager.unregisterNetworkCallback(callback)
+            } catch (e: Exception) {
+                android.util.Log.w("NetworkStatusMonitor", "Failed to unregister network callback: ${e.message}")
+            }
         }
     }.distinctUntilChanged()
 }

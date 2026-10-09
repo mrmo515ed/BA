@@ -35,7 +35,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Edge to edge styling fallback: ${e.message}")
+        }
         setContent {
             MyApplicationTheme {
                 Surface(
@@ -70,14 +74,23 @@ fun BlackAnimeApp(
             }
         )
     } else {
-        // Authenticated Session: Inject repository with custom database ID from R.string.firestore_database_id
+        // Authenticated Session: Inject repository with custom database ID with fallback to default instance
         val mainViewModel: MainViewModel = viewModel(
             key = user.uid,
             factory = viewModelFactory {
                 initializer {
                     val app = checkNotNull(this[APPLICATION_KEY])
-                    val databaseId = app.getString(R.string.firestore_database_id)
-                    val db = FirebaseFirestore.getInstance(databaseId)
+                    val db = try {
+                        val databaseId = app.getString(R.string.firestore_database_id)
+                        if (databaseId.isNotBlank() && databaseId != "(default)") {
+                            FirebaseFirestore.getInstance(databaseId)
+                        } else {
+                            FirebaseFirestore.getInstance()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MainActivity", "Falling back to default Firestore database: ${e.message}")
+                        FirebaseFirestore.getInstance()
+                    }
                     val repository = AnimeRepository(db)
                     MainViewModel(repository, user.uid, user)
                 }

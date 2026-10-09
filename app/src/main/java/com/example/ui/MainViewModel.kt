@@ -3,6 +3,8 @@ package com.example.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.AdminAuditLog
+import com.example.data.model.AnimeItem
 import com.example.data.model.Channel
 import com.example.data.model.Comment
 import com.example.data.model.FriendRequest
@@ -11,6 +13,7 @@ import com.example.data.model.LiveStream
 import com.example.data.model.Message
 import com.example.data.model.NotificationItem
 import com.example.data.model.Post
+import com.example.data.model.ReportItem
 import com.example.data.model.Story
 import com.example.data.model.UserProfile
 import com.example.data.repository.AnimeRepository
@@ -549,5 +552,85 @@ class MainViewModel(
 
     fun setSearchFilter(filter: String) {
         _searchFilter.value = filter
+    }
+
+    // ==================== ANIMES STREAM & OPS ====================
+
+    val animes: StateFlow<List<AnimeItem>> = repository.observeAnimes()
+        .catch { e ->
+            Log.e(TAG, "Error observing animes: ${e.message}", e)
+            emit(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ==================== ADMIN & MODERATION ====================
+
+    val reports: StateFlow<List<ReportItem>> = repository.observeReports()
+        .catch { e ->
+            Log.e(TAG, "Error observing reports: ${e.message}", e)
+            emit(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val adminLogs: StateFlow<List<AdminAuditLog>> = repository.observeAdminLogs()
+        .catch { e ->
+            Log.e(TAG, "Error observing admin logs: ${e.message}", e)
+            emit(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addOrUpdateAnime(anime: AnimeItem, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.addOrUpdateAnime(anime, currentUser)
+            result.onSuccess {
+                onResult(true, "تم حفظ ونشر بيانات الأنمي بنجاح في قاعدة البيانات 🖤✨")
+            }.onFailure { err ->
+                onResult(false, err.message ?: "حدث خطأ أثناء حفظ بيانات الأنمي")
+            }
+        }
+    }
+
+    fun deleteAnime(animeId: String, animeTitle: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.deleteAnime(animeId, animeTitle, currentUser)
+            result.onSuccess {
+                onResult(true, "تم حذف الأنمي بنجاح")
+            }.onFailure { err ->
+                onResult(false, err.message ?: "فشل حذف الأنمي")
+            }
+        }
+    }
+
+    fun resolveReport(reportId: String, actionTaken: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.resolveReport(reportId, actionTaken, currentUser)
+            result.onSuccess {
+                onResult(true, "تمت معالجة البلاغ بنجاح")
+            }.onFailure { err ->
+                onResult(false, err.message ?: "فشل معالجة البلاغ")
+            }
+        }
+    }
+
+    fun setUserBanStatus(userId: String, isBanned: Boolean, reason: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.setUserBanStatus(userId, isBanned, reason, currentUser)
+            result.onSuccess {
+                onResult(true, if (isBanned) "تم حظر المستخدم بنجاح" else "تم إلغاء الحظر بنجاح")
+            }.onFailure { err ->
+                onResult(false, err.message ?: "فشل تحديث حالة الحظر")
+            }
+        }
+    }
+
+    fun deleteViolatingPost(postId: String, reason: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.deleteViolatingPost(postId, reason, currentUser)
+            result.onSuccess {
+                onResult(true, "تم حذف المنشور المخالف بنجاح")
+            }.onFailure { err ->
+                onResult(false, err.message ?: "فشل حذف المنشور")
+            }
+        }
     }
 }

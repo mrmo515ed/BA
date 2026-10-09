@@ -3,6 +3,8 @@ package com.example.data.repository
 import android.content.Context
 import android.util.Log
 import com.example.R
+import com.example.data.model.AdminAuditLog
+import com.example.data.model.AnimeItem
 import com.example.data.model.Channel
 import com.example.data.model.Comment
 import com.example.data.model.FriendRequest
@@ -11,6 +13,7 @@ import com.example.data.model.LiveStream
 import com.example.data.model.Message
 import com.example.data.model.NotificationItem
 import com.example.data.model.Post
+import com.example.data.model.ReportItem
 import com.example.data.model.Story
 import com.example.data.model.UserProfile
 import com.google.firebase.auth.FirebaseUser
@@ -44,30 +47,52 @@ class AnimeRepository(
         }
     }
     constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
+        try {
+            val dbId = context.applicationContext.getString(R.string.firestore_database_id)
+            if (dbId.isNotBlank() && dbId != "(default)") {
+                FirebaseFirestore.getInstance(dbId)
+            } else {
+                FirebaseFirestore.getInstance()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Fallback to default Firestore: ${e.message}")
+            FirebaseFirestore.getInstance()
+        }
     )
 
     // User Profile
     suspend fun getOrCreateUserProfile(user: FirebaseUser): UserProfile {
         val docRef = db.collection("users").document(user.uid)
+        val isSystemAdmin = user.email?.equals("m774545471@gmail.com", ignoreCase = true) == true
         val snapshot = docRef.get().await()
         if (snapshot.exists()) {
             val profile = snapshot.toObject(UserProfile::class.java)
-            if (profile != null) return profile
+            if (profile != null) {
+                if (isSystemAdmin && (!profile.isAdmin || profile.email != user.email)) {
+                    val updatedProfile = profile.copy(
+                        isAdmin = true,
+                        email = user.email ?: "",
+                        role = if (profile.role.contains("مدير") || profile.role.contains("admin", true)) profile.role else "المدير العام للمنصة 👑"
+                    )
+                    docRef.set(updatedProfile).await()
+                    return updatedProfile
+                }
+                return profile
+            }
         }
 
         val cleanUsername = (user.email?.substringBefore("@") ?: "otaku_${user.uid.take(5)}")
         val newProfile = UserProfile(
             userId = user.uid,
+            email = user.email ?: "",
             username = cleanUsername,
             displayName = user.displayName ?: "محارب الأنمي",
             avatarUrl = user.photoUrl?.toString() ?: "",
             bio = "أوتاكو ومتابع أنمي في بلاك انمي 🔥",
             favoriteAnime = "هجوم العمالقة",
             favoriteCharacter = "ليفاي أكرمان",
-            role = "أوتاكو مميز",
+            role = if (isSystemAdmin) "المدير العام للمنصة 👑" else "أوتاكو مميز",
+            isAdmin = isSystemAdmin,
             joinedAt = System.currentTimeMillis()
         )
         docRef.set(newProfile).await()
@@ -627,6 +652,203 @@ class AnimeRepository(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Seeding error: ${e.message}", e)
+        }
+    }
+
+    // ==================== ANIMES MANAGEMENT ====================
+
+    fun observeAnimes(): Flow<List<AnimeItem>> {
+        return db.collection("animes")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { it.toObject(AnimeItem::class.java) }
+            }
+    }
+
+    suspend fun getAnimeById(animeId: String): AnimeItem? {
+        val doc = db.collection("animes").document(animeId).get().await()
+        return if (doc.exists()) doc.toObject(AnimeItem::class.java) else null
+    }
+
+    suspend fun addOrUpdateAnime(anime: AnimeItem, adminUser: FirebaseUser): Result<Unit> {
+        return try {
+            val cleanId = anime.id.trim()
+            if (cleanId.isBlank()) {
+                return Result.failure(IllegalArgumentException("معرف الأنمي (Anime ID) مطلوب ولا يمكن تركه فارغاً"))
+            }
+            if (anime.titleArabic.isBlank()) {
+                return Result.failure(IllegalArgumentException("عنوان الأنمي بالعربية مطلوب"))
+            }
+
+            val toSave = anime.copy(
+                id = cleanId,
+                addedBy = adminUser.uid,
+                addedByEmail = adminUser.email ?: ""
+            )
+
+            db.collection("animes").document(cleanId).set(toSave).await()
+
+            // Synchronize with anime_wiki collection for seamless app integration
+            db.collection("anime_wiki").document(cleanId).set(
+                com.example.data.model.AnimeWikiItem(
+                    id = cleanId,
+                    titleArabic = toSave.titleArabic,
+                    titleRomaji = toSave.titleEnglish,
+                    synopsis = toSave.synopsisArabic,
+                    genres = toSave.genres,
+                    episodesCount = toSave.episodesCount,
+                    rating = toSave.rating,
+                    status = toSave.status,
+                    season = toSave.season,
+                    coverImage = toSave.coverImageUrl
+                )
+            ).await()
+
+            // Record in persistent audit logs
+            logAdminAudit(
+                AdminAuditLog(
+                    id = "log_${System.currentTimeMillis()}",
+                    adminId = adminUser.uid,
+                    adminEmail = adminUser.email ?: "",
+                    actionType = "ADD_OR_UPDATE_ANIME",
+                    targetId = cleanId,
+                    targetTitle = "${toSave.titleArabic} (${toSave.titleEnglish})",
+                    details = "تم حفظ ونشر بيانات الأنمي بنجاح",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding/updating anime: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAnime(animeId: String, animeTitle: String, adminUser: FirebaseUser): Result<Unit> {
+        return try {
+            db.collection("animes").document(animeId).delete().await()
+            db.collection("anime_wiki").document(animeId).delete().await()
+
+            logAdminAudit(
+                AdminAuditLog(
+                    id = "log_${System.currentTimeMillis()}",
+                    adminId = adminUser.uid,
+                    adminEmail = adminUser.email ?: "",
+                    actionType = "DELETE_ANIME",
+                    targetId = animeId,
+                    targetTitle = animeTitle,
+                    details = "تم حذف الأنمي من المنصة بواسطة المسؤول",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting anime: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // ==================== MODERATION & REPORTS ====================
+
+    suspend fun resolveReport(reportId: String, actionTaken: String, adminUser: FirebaseUser): Result<Unit> {
+        return try {
+            db.collection("reports").document(reportId).update(
+                mapOf(
+                    "status" to "RESOLVED",
+                    "actionTaken" to actionTaken,
+                    "reviewedBy" to (adminUser.email ?: adminUser.uid)
+                )
+            ).await()
+
+            logAdminAudit(
+                AdminAuditLog(
+                    id = "log_${System.currentTimeMillis()}",
+                    adminId = adminUser.uid,
+                    adminEmail = adminUser.email ?: "",
+                    actionType = "RESOLVE_REPORT",
+                    targetId = reportId,
+                    targetTitle = "بلاغ رقم $reportId",
+                    details = "تمت معالجة البلاغ: $actionTaken",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving report: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setUserBanStatus(userId: String, isBanned: Boolean, reason: String, adminUser: FirebaseUser): Result<Unit> {
+        return try {
+            db.collection("users").document(userId).update(
+                mapOf(
+                    "isBanned" to isBanned,
+                    "banReason" to reason
+                )
+            ).await()
+
+            logAdminAudit(
+                AdminAuditLog(
+                    id = "log_${System.currentTimeMillis()}",
+                    adminId = adminUser.uid,
+                    adminEmail = adminUser.email ?: "",
+                    actionType = if (isBanned) "BAN_USER" else "UNBAN_USER",
+                    targetId = userId,
+                    targetTitle = "المستخدم $userId",
+                    details = if (isBanned) "تم حظر المستخدم. السبب: $reason" else "تم فك الحظر عن المستخدم",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user ban status: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteViolatingPost(postId: String, reason: String, adminUser: FirebaseUser): Result<Unit> {
+        return try {
+            db.collection("posts").document(postId).delete().await()
+
+            logAdminAudit(
+                AdminAuditLog(
+                    id = "log_${System.currentTimeMillis()}",
+                    adminId = adminUser.uid,
+                    adminEmail = adminUser.email ?: "",
+                    actionType = "DELETE_POST",
+                    targetId = postId,
+                    targetTitle = "منشور مخالف",
+                    details = "تم حذف المنشور بواسطة الإدارة. السبب: $reason",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting post: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // ==================== AUDIT LOGS ====================
+
+    fun observeAdminLogs(): Flow<List<AdminAuditLog>> {
+        return db.collection("admin_logs")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(100)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { it.toObject(AdminAuditLog::class.java) }
+            }
+    }
+
+    private suspend fun logAdminAudit(log: AdminAuditLog) {
+        try {
+            db.collection("admin_logs").document(log.id).set(log).await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write audit log: ${e.message}")
         }
     }
 }

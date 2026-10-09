@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Forum
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +57,7 @@ import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.CreateStoryDialog
 import com.example.ui.components.OtakuSenseiDialog
 import com.example.ui.components.StoryViewerDialog
+import com.example.ui.screens.AdminPanelScreen
 import com.example.ui.screens.ChannelsScreen
 import com.example.ui.screens.ChatRoomScreen
 import com.example.ui.screens.EconomyGameScreen
@@ -101,6 +105,7 @@ fun AnimeMainApp(
     var showReelsScreen by remember { mutableStateOf(false) }
     var showEconomyScreen by remember { mutableStateOf(false) }
     var showOtakuSenseiDialog by remember { mutableStateOf(false) }
+    var showAdminPanel by remember { mutableStateOf(false) }
 
     // State flows
     val posts by viewModel.posts.collectAsStateWithLifecycle()
@@ -121,10 +126,27 @@ fun AnimeMainApp(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val reels by viewModel.reels.collectAsStateWithLifecycle()
     val economyProfile by viewModel.economyProfile.collectAsStateWithLifecycle()
+    val animes by viewModel.animes.collectAsStateWithLifecycle()
+    val reports by viewModel.reports.collectAsStateWithLifecycle()
+    val adminLogs by viewModel.adminLogs.collectAsStateWithLifecycle()
 
     // BackHandler for tab navigation
-    if (selectedTab != AnimeTab.FEED && activeChannel == null && activeLiveStream == null && !showReelsScreen && !showEconomyScreen) {
+    if (selectedTab != AnimeTab.FEED && activeChannel == null && activeLiveStream == null && !showReelsScreen && !showEconomyScreen && !showAdminPanel) {
         BackHandler { selectedTab = AnimeTab.FEED }
+    }
+
+    // Active Admin Panel Screen (Full Screen)
+    if (showAdminPanel) {
+        AdminPanelScreen(
+            viewModel = viewModel,
+            currentUserProfile = userProfile,
+            animes = animes,
+            reports = reports,
+            adminLogs = adminLogs,
+            allUsers = allUsers,
+            onClose = { showAdminPanel = false }
+        )
+        return
     }
 
     // Active Live Stream Screen (Full Screen)
@@ -287,6 +309,23 @@ fun AnimeMainApp(
                     )
                 )
             }
+        },
+        floatingActionButton = {
+            if (userProfile?.hasAdminPrivileges(viewModel.currentUser.email) == true && !showAdminPanel) {
+                FloatingActionButton(
+                    onClick = { showAdminPanel = true },
+                    containerColor = AnimeCrimson,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.testTag("floating_admin_fab")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AdminPanelSettings,
+                        contentDescription = "لوحة الإدارة العليا",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         Column(
@@ -362,6 +401,7 @@ fun AnimeMainApp(
                         allUsers = allUsers,
                         currentUserProfile = userProfile,
                         currentUserId = viewModel.currentUserId,
+                        animes = animes,
                         onFollowToggle = { targetId -> viewModel.toggleFollowUser(targetId) },
                         onSendFriendRequest = { targetId -> viewModel.sendFriendRequest(targetId) },
                         onPostClick = { post -> viewModel.openComments(post) },
@@ -392,12 +432,14 @@ fun AnimeMainApp(
                         profile = userProfile,
                         userPosts = myPosts,
                         friendRequests = friendRequests,
+                        currentUserEmail = viewModel.currentUser.email,
                         onAcceptFriendRequest = { req -> viewModel.respondToFriendRequest(req.id, true, req.senderId) },
                         onDeclineFriendRequest = { req -> viewModel.respondToFriendRequest(req.id, false, req.senderId) },
                         onUpdateProfile = { name, bio, favAnime, favChar, role ->
                             viewModel.updateProfile(name, bio, favAnime, favChar, role)
                         },
                         onOpenEconomyClick = { showEconomyScreen = true },
+                        onOpenAdminClick = { showAdminPanel = true },
                         onSignOutClick = onSignOutClick
                     )
                 }

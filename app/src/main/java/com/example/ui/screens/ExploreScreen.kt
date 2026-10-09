@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.model.AnimeItem
 import com.example.data.model.Channel
 import com.example.data.model.Post
 import com.example.data.model.UserProfile
@@ -89,6 +90,7 @@ fun ExploreScreen(
     allUsers: List<UserProfile>,
     currentUserProfile: UserProfile?,
     currentUserId: String,
+    animes: List<AnimeItem> = emptyList(),
     onFollowToggle: (String) -> Unit,
     onSendFriendRequest: (String) -> Unit,
     onPostClick: (Post) -> Unit,
@@ -108,12 +110,12 @@ fun ExploreScreen(
     )
 
     val animeSeriesDatabase = listOf(
-        Pair("هجوم العمالقة (Attack on Titan)", "شونين، أكشن، غموض، عمالقة"),
-        Pair("ون بيس (One Piece)", "شونين، قراصنة، مغامرات، كوميديا"),
-        Pair("جوجوتسو كايسن (Jujutsu Kaisen)", "أكشن، خوارق، شياطين، قتالات"),
-        Pair("سولو ليفلينغ (Solo Leveling)", "خيال، بوابات، صيادين، مستوى"),
-        Pair("قاتل الشياطين (Demon Slayer)", "تاريخي، سيوف، شياطين، عائلة"),
-        Pair("ديث نوت (Death Note)", "غموض، ذكاء، إثارة نفسية، شينغامي")
+        Triple("هجوم العمالقة (Attack on Titan)", "شونين، أكشن، غموض، عمالقة", "قتال البشرية ضد العمالقة"),
+        Triple("ون بيس (One Piece)", "شونين، قراصنة، مغامرات، كوميديا", "رحلة لوفي نحو كنز الون بيس"),
+        Triple("جوجوتسو كايسن (Jujutsu Kaisen)", "أكشن، خوارق، شياطين، قتالات", "عالم مستعملي الطاقة الملعونة"),
+        Triple("سولو ليفلينغ (Solo Leveling)", "خيال، بوابات، صيادين، مستوى", "صعود الصياد الأضعف إلى القمة"),
+        Triple("قاتل الشياطين (Demon Slayer)", "تاريخي، سيوف، شياطين، عائلة", "رحلة تانجيرو لإنقاذ شقيقته"),
+        Triple("ديث نوت (Death Note)", "غموض، ذكاء، إثارة نفسية، شينغامي", "صراع العقول بين لايت وإل")
     )
 
     val trimmedQuery = searchQuery.trim()
@@ -129,11 +131,20 @@ fun ExploreScreen(
         }
     }
 
-    val matchedAnimeSeries = remember(animeSeriesDatabase, trimmedQuery) {
-        if (trimmedQuery.isEmpty()) animeSeriesDatabase
-        else animeSeriesDatabase.filter {
+    val matchedAnimeSeries = remember(animeSeriesDatabase, animes, trimmedQuery) {
+        val cloudEntries = animes.map {
+            Triple(
+                "${it.titleArabic} (${it.titleEnglish})",
+                it.genres.joinToString("، "),
+                it.synopsisArabic
+            )
+        }
+        val combined = cloudEntries + animeSeriesDatabase
+        if (trimmedQuery.isEmpty()) combined
+        else combined.filter {
             it.first.contains(trimmedQuery, ignoreCase = true) ||
-            it.second.contains(trimmedQuery, ignoreCase = true)
+            it.second.contains(trimmedQuery, ignoreCase = true) ||
+            it.third.contains(trimmedQuery, ignoreCase = true)
         }
     }
 
@@ -516,7 +527,7 @@ fun ExploreScreen(
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
-                        items(matchedAnimeSeries) { (animeName, genres) ->
+                        items(matchedAnimeSeries) { (animeName, genres, synopsis) ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -548,6 +559,15 @@ fun ExploreScreen(
                                             fontSize = 11.sp,
                                             color = AnimeTextSecondary
                                         )
+                                        if (synopsis.isNotBlank()) {
+                                            Text(
+                                                text = synopsis,
+                                                fontSize = 11.sp,
+                                                color = AnimeTextMuted,
+                                                maxLines = 2,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }

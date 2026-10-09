@@ -41,6 +41,36 @@ data class AnimeWikiItem(
     val coverImage: String = "character"
 )
 
+data class AnimeItem(
+    val id: String = "",
+    val titleArabic: String = "",
+    val titleEnglish: String = "",
+    val synopsisArabic: String = "",
+    val synopsisEnglish: String = "",
+    val genres: List<String> = emptyList(),
+    val status: String = "مستمر", // مستمر, مكتمل, قادم قريباً
+    val releaseYear: Int = 2026,
+    val season: String = "خريف 2026",
+    val episodesCount: Int = 24,
+    val rating: Double = 9.0,
+    val coverImageUrl: String = "battle", // URL or preset (battle, character, banner)
+    val bannerImageUrl: String = "banner",
+    val addedBy: String = "",
+    val addedByEmail: String = "",
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+data class AdminAuditLog(
+    val id: String = "",
+    val adminId: String = "",
+    val adminEmail: String = "",
+    val actionType: String = "", // ADD_ANIME, EDIT_ANIME, DELETE_ANIME, BAN_USER, UNBAN_USER, RESOLVE_REPORT, DELETE_POST
+    val targetId: String = "",
+    val targetTitle: String = "",
+    val details: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 data class ReportItem(
     val id: String = "",
     val reporterId: String = "",
@@ -48,6 +78,8 @@ data class ReportItem(
     val targetId: String = "",
     val targetType: String = "POST", // POST, USER, MESSAGE, GROUP
     val reason: String = "",
-    val status: String = "PENDING", // PENDING, RESOLVED
+    val status: String = "PENDING", // PENDING, RESOLVED, DISMISSED
+    val actionTaken: String = "",
+    val reviewedBy: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )

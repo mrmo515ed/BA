@@ -6,21 +6,43 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "m774545471@gmail.com" ||
+        request.auth.token.admin == true
+      );
+    }
+
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /animes/{animeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /admin_logs/{logId} {
+      allow read, create: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.reporterId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
-      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || resource.data.authorId == "news_bot");
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || resource.data.authorId == "news_bot" || isAdmin());
 
       match /comments/{commentId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated();
-        allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
       }
     }
 
@@ -80,11 +102,6 @@ service cloud.firestore {
     match /anime_wiki/{wikiId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
-    }
-
-    match /reports/{reportId} {
-      allow read, create: if isAuthenticated();
-      allow update, delete: if isAuthenticated();
     }
   }
 }
