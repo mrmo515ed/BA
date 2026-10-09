@@ -633,4 +633,152 @@ class MainViewModel(
             }
         }
     }
+
+    // ==================== USER ANIME TRACKING (Animesta & Kunaiu) ====================
+
+    val userAnimeTracking: StateFlow<List<com.example.data.model.UserAnimeTracking>> = repository.observeUserAnimeTracking(currentUserId)
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun updateAnimeTracking(
+        animeId: String,
+        titleAr: String,
+        titleEn: String,
+        cover: String,
+        status: String,
+        currentEpisode: Int,
+        totalEpisodes: Int,
+        score: Double,
+        note: String
+    ) {
+        viewModelScope.launch {
+            try {
+                val tracking = com.example.data.model.UserAnimeTracking(
+                    animeId = animeId,
+                    userId = currentUserId,
+                    animeTitleArabic = titleAr,
+                    animeTitleEnglish = titleEn,
+                    coverImage = cover,
+                    status = status,
+                    currentEpisode = currentEpisode,
+                    totalEpisodes = totalEpisodes,
+                    userScore = score,
+                    note = note,
+                    updatedAt = System.currentTimeMillis()
+                )
+                repository.saveOrUpdateAnimeTracking(currentUserId, tracking)
+            } catch (e: Exception) {
+                Log.e(TAG, "Update anime tracking failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun removeAnimeTracking(animeId: String) {
+        viewModelScope.launch {
+            try {
+                repository.removeAnimeTracking(currentUserId, animeId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Remove anime tracking failed: ${e.message}", e)
+            }
+        }
+    }
+
+    // ==================== ADVANCED CHAT & FEED (Telegram / WhatsApp / Instagram) ====================
+
+    fun reactToMessage(channelId: String, messageId: String, emoji: String) {
+        viewModelScope.launch {
+            try {
+                repository.reactToMessage(channelId, messageId, emoji, currentUserId)
+            } catch (e: Exception) {
+                Log.e(TAG, "React to message failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun voteInPoll(postId: String, optionIndex: Int) {
+        viewModelScope.launch {
+            try {
+                repository.voteInPoll(postId, optionIndex, currentUserId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Vote in poll failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun sendMessageAdvanced(
+        channelId: String,
+        content: String,
+        mediaUrl: String = "",
+        messageType: String = "TEXT",
+        replyToMessageId: String = "",
+        replyToSenderName: String = "",
+        replyToContent: String = ""
+    ) {
+        if (content.isBlank() && mediaUrl.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val senderName = profile?.displayName ?: currentUser.displayName ?: "أوتاكو"
+                val senderAvatar = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: ""
+
+                val message = Message(
+                    channelId = channelId,
+                    senderId = currentUserId,
+                    senderName = senderName,
+                    senderAvatarUrl = senderAvatar,
+                    content = content.trim(),
+                    mediaUrl = mediaUrl,
+                    messageType = messageType,
+                    replyToMessageId = replyToMessageId,
+                    replyToSenderName = replyToSenderName,
+                    replyToContent = replyToContent,
+                    timestamp = System.currentTimeMillis()
+                )
+                repository.sendMessage(message)
+            } catch (e: Exception) {
+                Log.e(TAG, "Send message advanced failed: ${e.message}", e)
+            }
+        }
+    }
+
+    fun createPostAdvanced(
+        content: String,
+        animeTitle: String,
+        mediaUrl: String,
+        mediaType: String,
+        tags: List<String>,
+        isSpoiler: Boolean = false,
+        pollQuestion: String = "",
+        pollOptions: List<String> = emptyList(),
+        ratingScore: Double = 0.0
+    ) {
+        viewModelScope.launch {
+            try {
+                val profile = _userProfile.value
+                val authorName = profile?.displayName ?: currentUser.displayName ?: "أوتاكو"
+                val authorAvatar = profile?.avatarUrl ?: currentUser.photoUrl?.toString() ?: ""
+                val authorRole = profile?.role ?: "أوتاكو مميز"
+
+                val post = Post(
+                    authorId = currentUserId,
+                    authorName = authorName,
+                    authorAvatarUrl = authorAvatar,
+                    authorRole = authorRole,
+                    content = content,
+                    animeTitle = animeTitle,
+                    mediaUrl = mediaUrl,
+                    mediaType = mediaType,
+                    tags = tags,
+                    isSpoiler = isSpoiler,
+                    pollQuestion = pollQuestion,
+                    pollOptions = pollOptions,
+                    ratingScore = ratingScore,
+                    createdAt = System.currentTimeMillis()
+                )
+                repository.createPost(post)
+            } catch (e: Exception) {
+                Log.e(TAG, "Create post advanced failed: ${e.message}", e)
+            }
+        }
+    }
 }

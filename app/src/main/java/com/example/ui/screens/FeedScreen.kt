@@ -78,6 +78,7 @@ import com.example.ui.theme.AnimeBorder
 import com.example.ui.theme.AnimeCardSurface
 import com.example.ui.theme.AnimeCardSurfaceHover
 import com.example.ui.theme.AnimeCrimson
+import com.example.ui.theme.AnimeDarkSurface
 import com.example.ui.theme.AnimeGold
 import com.example.ui.theme.AnimeTextMuted
 import com.example.ui.theme.AnimeTextPrimary
@@ -500,14 +501,108 @@ fun AnimePostCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Content Text
-            Text(
-                text = post.content,
-                fontSize = 14.sp,
-                color = AnimeTextPrimary,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.Normal
-            )
+            // Spoiler overlay warning (Telegram / Reddit style)
+            var revealSpoiler by remember { mutableStateOf(!post.isSpoiler) }
+
+            if (post.isSpoiler && !revealSpoiler) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AnimeCrimson.copy(alpha = 0.15f))
+                        .border(1.dp, AnimeCrimson, RoundedCornerShape(12.dp))
+                        .clickable { revealSpoiler = true }
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "⚠️ يحتوي هذا المنشور على حرق أحداث أنمي!",
+                            fontWeight = FontWeight.Bold,
+                            color = AnimeCrimson,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "اضغط لكشف المحتوى",
+                            color = AnimeTextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            // Content Text (Revealed or non-spoiler)
+            if (revealSpoiler) {
+                Text(
+                    text = post.content,
+                    fontSize = 14.sp,
+                    color = AnimeTextPrimary,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            // Interactive Poll (Telegram / Instagram / Animesta style)
+            if (post.pollQuestion.isNotBlank() && post.pollOptions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = AnimeDarkSurface),
+                    border = BorderStroke(1.dp, AnimeViolet.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "📊 ${post.pollQuestion}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = AnimeViolet
+                            )
+                        }
+
+                        val myVotedIndex = post.votedUsers[currentUserId]
+                        val totalVotes = post.pollVotes.values.sum().coerceAtLeast(1)
+
+                        post.pollOptions.forEachIndexed { idx, opt ->
+                            val optionVotes = post.pollVotes[idx.toString()] ?: 0
+                            val pct = (optionVotes.toFloat() / totalVotes * 100).toInt()
+                            val isMyChoice = myVotedIndex == idx
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isMyChoice) AnimeViolet.copy(alpha = 0.25f) else AnimeCardSurface)
+                                    .border(1.dp, if (isMyChoice) AnimeViolet else AnimeBorder, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        // Vote action can be handled via onLikeClick or similar trigger
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${if (isMyChoice) "✓ " else ""}$opt",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isMyChoice) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isMyChoice) Color.White else AnimeTextPrimary
+                                    )
+                                    Text(
+                                        text = "$pct% ($optionVotes)",
+                                        fontSize = 11.sp,
+                                        color = AnimeTextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             if (post.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))

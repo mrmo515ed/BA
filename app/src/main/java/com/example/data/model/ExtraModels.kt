@@ -83,3 +83,27 @@ data class ReportItem(
     val reviewedBy: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
+
+// Anime Tracking for User (watching, completed, plan to watch, episodes, rating) - Animesta & Kunaiu & Mirai feature
+data class UserAnimeTracking(
+    val animeId: String = "",
+    val userId: String = "",
+    val animeTitleArabic: String = "",
+    val animeTitleEnglish: String = "",
+    val coverImage: String = "battle",
+    val status: String = "WATCHING", // WATCHING, COMPLETED, PLAN_TO_WATCH, ON_HOLD, DROPPED
+    val currentEpisode: Int = 1,
+    val totalEpisodes: Int = 24,
+    val userScore: Double = 0.0,
+    val note: String = "",
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+// Anime Episode Item (Discussions & Episode tracking)
+data class AnimeEpisode(
+    val episodeNumber: Int = 1,
+    val titleArabic: String = "",
+    val durationMinutes: Int = 24,
+    val airDate: String = "",
+    val discussionsCount: Int = 0
+)

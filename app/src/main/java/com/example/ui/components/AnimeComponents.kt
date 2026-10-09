@@ -402,15 +402,23 @@ fun AddStoryButton(
 @Composable
 fun CreatePostDialog(
     onDismiss: () -> Unit,
-    onSubmit: (content: String, animeTitle: String, mediaUrl: String, mediaType: String, tags: List<String>) -> Unit
+    onSubmit: (content: String, animeTitle: String, mediaUrl: String, mediaType: String, tags: List<String>) -> Unit,
+    onSubmitAdvanced: (content: String, animeTitle: String, mediaUrl: String, mediaType: String, tags: List<String>, isSpoiler: Boolean, pollQ: String, pollOptions: List<String>, rating: Double) -> Unit = { c, t, m, mt, tg, _, _, _, _ -> onSubmit(c, t, m, mt, tg) }
 ) {
     var content by remember { mutableStateOf("") }
     var animeTitle by remember { mutableStateOf("") }
     var selectedTag by remember { mutableStateOf("عام") }
     var selectedMediaType by remember { mutableStateOf("IMAGE") }
     var selectedSampleArt by remember { mutableStateOf("character") }
+    var isSpoiler by remember { mutableStateOf(false) }
+    var isPollActive by remember { mutableStateOf(false) }
+    var pollQuestion by remember { mutableStateOf("") }
+    var pollOption1 by remember { mutableStateOf("") }
+    var pollOption2 by remember { mutableStateOf("") }
+    var pollOption3 by remember { mutableStateOf("") }
+    var ratingScore by remember { mutableStateOf(0.0) }
 
-    val tagsList = listOf("عام", "هجوم العمالقة", "ون بيس", "جوجوتسو كايسن", "سولو ليفلينغ", "قاتل الشياطين", "ديث نوت", "مانجا", "نظريات", "اقتباسات")
+    val tagsList = listOf("عام", "هجوم العمالقة", "ون بيس", "جوجوتسو كايسن", "سولو ليفلينغ", "قاتل الشياطين", "ديث نوت", "مانجا", "نظريات", "اقتباسات", "حرق_أحداث", "مراجعة_حلقة")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -418,205 +426,292 @@ fun CreatePostDialog(
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .padding(16.dp),
+                .fillMaxWidth(0.95f)
+                .padding(14.dp),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = AnimeDarkSurface),
             border = BorderStroke(1.dp, AnimeBorder)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "نشر منشور أنمي جديد",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AnimeTextPrimary
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = AnimeTextMuted)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "محرر النشر الأسطوري (بلاك انمي)",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                            color = AnimeTextPrimary
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = AnimeTextMuted)
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    value = animeTitle,
-                    onValueChange = { animeTitle = it },
-                    label = { Text("عنوان الأنمي (مثال: جوجوتسو كايسن)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("create_post_anime_title"),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AnimeCrimson,
-                        unfocusedBorderColor = AnimeBorder,
-                        focusedLabelColor = AnimeCrimson,
-                        focusedTextColor = AnimeTextPrimary,
-                        unfocusedTextColor = AnimeTextPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
+                    OutlinedTextField(
+                        value = animeTitle,
+                        onValueChange = { animeTitle = it },
+                        label = { Text("عنوان الأنمي (مثال: ون بيس)") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("create_post_anime_title"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AnimeCrimson,
+                            unfocusedBorderColor = AnimeBorder,
+                            focusedTextColor = AnimeTextPrimary,
+                            unfocusedTextColor = AnimeTextPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("ماذا يدور في ذهنك؟ شارك تحليلك، رأيك أو اقتباسك...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                        .testTag("create_post_content"),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AnimeCrimson,
-                        unfocusedBorderColor = AnimeBorder,
-                        focusedLabelColor = AnimeCrimson,
-                        focusedTextColor = AnimeTextPrimary,
-                        unfocusedTextColor = AnimeTextPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = { Text("اكتب تحليلك، نظريتك، اقتباسك أو مراجعتك...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .testTag("create_post_content"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AnimeCrimson,
+                            unfocusedBorderColor = AnimeBorder,
+                            focusedTextColor = AnimeTextPrimary,
+                            unfocusedTextColor = AnimeTextPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = "اختر الوسم الأساسي:",
-                    fontSize = 12.sp,
-                    color = AnimeTextSecondary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    tagsList.take(6).forEach { tag ->
-                        val isSelected = selectedTag == tag
+                    // Spoiler & Poll Toggles (Telegram / Reddit / Animesta Features)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Box(
                             modifier = Modifier
+                                .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) AnimeCrimson else AnimeCardSurface)
-                                .clickable { selectedTag = tag }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .background(if (isSpoiler) AnimeCrimson else AnimeCardSurface)
+                                .clickable { isSpoiler = !isSpoiler }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "#$tag",
+                                text = if (isSpoiler) "⚠️ يحتوي حرق أحداث!" else "تحذير حرق (Spoiler)",
                                 fontSize = 11.sp,
-                                color = if (isSelected) Color.White else AnimeTextSecondary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSpoiler) Color.White else AnimeTextSecondary
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isPollActive) AnimeViolet else AnimeCardSurface)
+                                .clickable { isPollActive = !isPollActive }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isPollActive) "📊 استطلاع رأي مفعل" else "إضافة استطلاع رأي",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPollActive) Color.White else AnimeTextSecondary
                             )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "إرفاق صورة الأنمي التعبيرية:",
-                    fontSize = 12.sp,
-                    color = AnimeTextSecondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(
-                                if (selectedSampleArt == "character") 2.dp else 1.dp,
-                                if (selectedSampleArt == "character") AnimeCrimson else AnimeBorder,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { selectedSampleArt = "character" }
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(id = R.drawable.anime_character_art_1791388984389),
-                            contentDescription = "فن الشخصيات",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(
-                                if (selectedSampleArt == "battle") 2.dp else 1.dp,
-                                if (selectedSampleArt == "battle") AnimeCrimson else AnimeBorder,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { selectedSampleArt = "battle" }
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(id = R.drawable.anime_manga_art_1791388998934),
-                            contentDescription = "قتالات أسطورية",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(
-                                if (selectedSampleArt == "banner") 2.dp else 1.dp,
-                                if (selectedSampleArt == "banner") AnimeCrimson else AnimeBorder,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { selectedSampleArt = "banner" }
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(id = R.drawable.black_anime_banner_1791388840143),
-                            contentDescription = "مدينة الأنمي",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Button(
-                    onClick = {
-                        if (content.isNotBlank()) {
-                            val artIdentifier = selectedSampleArt
-                            onSubmit(
-                                content.trim(),
-                                animeTitle.ifBlank { "أنمي عام" },
-                                artIdentifier,
-                                selectedMediaType,
-                                listOf(selectedTag)
-                            )
-                            onDismiss()
+                    // Poll Fields if active
+                    if (isPollActive) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                            border = BorderStroke(1.dp, AnimeViolet.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("إنشاء استطلاع رأي تفاعلي:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AnimeViolet)
+                                OutlinedTextField(
+                                    value = pollQuestion,
+                                    onValueChange = { pollQuestion = it },
+                                    label = { Text("سؤال الاستطلاع") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = pollOption1,
+                                    onValueChange = { pollOption1 = it },
+                                    label = { Text("الخيار 1 (مثال: نعم)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = pollOption2,
+                                    onValueChange = { pollOption2 = it },
+                                    label = { Text("الخيار 2 (مثال: لا)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
                         }
-                    },
-                    enabled = content.isNotBlank(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("submit_create_post_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AnimeCrimson,
-                        disabledContainerColor = AnimeCardSurface
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("نشر في المجتمع الآن", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "اختر الوسم الأساسي:",
+                        fontSize = 12.sp,
+                        color = AnimeTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        tagsList.take(8).forEach { tag ->
+                            val isSelected = selectedTag == tag
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) AnimeCrimson else AnimeCardSurface)
+                                    .clickable { selectedTag = tag }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "#$tag",
+                                    fontSize = 11.sp,
+                                    color = if (isSelected) Color.White else AnimeTextSecondary,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "إرفاق صورة الأنمي التعبيرية:",
+                        fontSize = 12.sp,
+                        color = AnimeTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(
+                                    if (selectedSampleArt == "character") 2.dp else 1.dp,
+                                    if (selectedSampleArt == "character") AnimeCrimson else AnimeBorder,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .clickable { selectedSampleArt = "character" }
+                        ) {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.anime_character_art_1791388984389),
+                                contentDescription = "فن الشخصيات",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(
+                                    if (selectedSampleArt == "battle") 2.dp else 1.dp,
+                                    if (selectedSampleArt == "battle") AnimeCrimson else AnimeBorder,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .clickable { selectedSampleArt = "battle" }
+                        ) {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.anime_manga_art_1791388998934),
+                                contentDescription = "قتالات أسطورية",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(
+                                    if (selectedSampleArt == "banner") 2.dp else 1.dp,
+                                    if (selectedSampleArt == "banner") AnimeCrimson else AnimeBorder,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .clickable { selectedSampleArt = "banner" }
+                        ) {
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.black_anime_banner_1791388840143),
+                                contentDescription = "مدينة الأنمي",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            if (content.isNotBlank()) {
+                                val artIdentifier = selectedSampleArt
+                                val pollOpts = if (isPollActive && pollOption1.isNotBlank() && pollOption2.isNotBlank()) {
+                                    listOf(pollOption1.trim(), pollOption2.trim())
+                                } else emptyList()
+
+                                onSubmitAdvanced(
+                                    content.trim(),
+                                    animeTitle.ifBlank { "أنمي عام" },
+                                    artIdentifier,
+                                    selectedMediaType,
+                                    listOf(selectedTag),
+                                    isSpoiler,
+                                    if (isPollActive) pollQuestion.ifBlank { "ما رأيك؟" } else "",
+                                    pollOpts,
+                                    ratingScore
+                                )
+                                onDismiss()
+                            }
+                        },
+                        enabled = content.isNotBlank(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("submit_create_post_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AnimeCrimson,
+                            disabledContainerColor = AnimeCardSurface
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("نشر في المجتمع الآن ✨", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }

@@ -15,6 +15,7 @@ import com.example.data.model.NotificationItem
 import com.example.data.model.Post
 import com.example.data.model.ReportItem
 import com.example.data.model.Story
+import com.example.data.model.UserAnimeTracking
 import com.example.data.model.UserProfile
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
@@ -829,6 +830,103 @@ class AnimeRepository(
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting post: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    // ==================== USER ANIME TRACKING (Animesta / Kunaiu / Mirai) ====================
+
+    fun observeUserAnimeTracking(userId: String): Flow<List<UserAnimeTracking>> {
+        return db.collection("users").document(userId)
+            .collection("anime_tracking")
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { it.toObject(UserAnimeTracking::class.java) }
+            }
+    }
+
+    suspend fun saveOrUpdateAnimeTracking(userId: String, tracking: UserAnimeTracking): Result<Unit> {
+        return try {
+            db.collection("users").document(userId)
+                .collection("anime_tracking")
+                .document(tracking.animeId)
+                .set(tracking)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving anime tracking: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeAnimeTracking(userId: String, animeId: String): Result<Unit> {
+        return try {
+            db.collection("users").document(userId)
+                .collection("anime_tracking")
+                .document(animeId)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing anime tracking: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // ==================== CHAT REACTIONS & POLLS (Telegram / WhatsApp / Instagram) ====================
+
+    suspend fun reactToMessage(channelId: String, messageId: String, emoji: String, userId: String) {
+        try {
+            val docRef = db.collection("channels").document(channelId).collection("messages").document(messageId)
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                val msg = snapshot.toObject(Message::class.java) ?: return
+                val currentReactions = msg.reactions.toMutableMap()
+                val currentUsersForEmoji = (currentReactions[emoji] ?: emptyList()).toMutableList()
+                if (currentUsersForEmoji.contains(userId)) {
+                    currentUsersForEmoji.remove(userId)
+                } else {
+                    currentUsersForEmoji.add(userId)
+                }
+                if (currentUsersForEmoji.isEmpty()) {
+                    currentReactions.remove(emoji)
+                } else {
+                    currentReactions[emoji] = currentUsersForEmoji
+                }
+                docRef.update("reactions", currentReactions).await()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "React to message failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun voteInPoll(postId: String, optionIndex: Int, userId: String) {
+        try {
+            val docRef = db.collection("posts").document(postId)
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                val post = snapshot.toObject(Post::class.java) ?: return
+                val currentVoted = post.votedUsers.toMutableMap()
+                val currentVotes = post.pollVotes.toMutableMap()
+
+                val oldVote = currentVoted[userId]
+                if (oldVote != null) {
+                    val count = (currentVotes[oldVote.toString()] ?: 1) - 1
+                    currentVotes[oldVote.toString()] = maxOf(0, count)
+                }
+
+                currentVoted[userId] = optionIndex
+                val newCount = (currentVotes[optionIndex.toString()] ?: 0) + 1
+                currentVotes[optionIndex.toString()] = newCount
+
+                docRef.update(
+                    mapOf(
+                        "votedUsers" to currentVoted,
+                        "pollVotes" to currentVotes
+                    )
+                ).await()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Vote in poll failed: ${e.message}", e)
         }
     }
 

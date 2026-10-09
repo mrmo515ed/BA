@@ -94,7 +94,8 @@ fun ExploreScreen(
     onFollowToggle: (String) -> Unit,
     onSendFriendRequest: (String) -> Unit,
     onPostClick: (Post) -> Unit,
-    onChannelClick: (Channel) -> Unit
+    onChannelClick: (Channel) -> Unit,
+    onAnimeClick: (AnimeItem) -> Unit = {}
 ) {
     val context = LocalContext.current
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -528,10 +529,27 @@ fun ExploreScreen(
                             )
                         }
                         items(matchedAnimeSeries) { (animeName, genres, synopsis) ->
+                            val foundAnime = animes.find { animeName.contains(it.titleArabic, ignoreCase = true) || animeName.contains(it.titleEnglish, ignoreCase = true) }
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onSearchQueryChange(animeName.substringBefore(" ")) },
+                                    .clickable {
+                                        if (foundAnime != null) {
+                                            onAnimeClick(foundAnime)
+                                        } else {
+                                            val dummy = AnimeItem(
+                                                id = animeName.hashCode().toString(),
+                                                titleArabic = animeName.substringBefore(" ("),
+                                                titleEnglish = animeName.substringAfter("(").substringBefore(")"),
+                                                synopsisArabic = synopsis,
+                                                genres = genres.split("، "),
+                                                episodesCount = 24,
+                                                rating = 9.0
+                                            )
+                                            onAnimeClick(dummy)
+                                        }
+                                    },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
                                 border = BorderStroke(1.dp, AnimeBorder)

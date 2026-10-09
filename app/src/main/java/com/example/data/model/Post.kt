@@ -17,6 +17,12 @@ data class Post(
     val sharesCount: Long = 0L,
     val savedBy: List<String> = emptyList(),
     val isNews: Boolean = false,
+    val isSpoiler: Boolean = false,
+    val pollQuestion: String = "",
+    val pollOptions: List<String> = emptyList(),
+    val pollVotes: Map<String, Int> = emptyMap(), // optionIndex -> votesCount
+    val votedUsers: Map<String, Int> = emptyMap(), // userId -> optionIndex
+    val ratingScore: Double = 0.0,
     val groupId: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

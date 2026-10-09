@@ -58,6 +58,7 @@ import com.example.ui.components.CreateStoryDialog
 import com.example.ui.components.OtakuSenseiDialog
 import com.example.ui.components.StoryViewerDialog
 import com.example.ui.screens.AdminPanelScreen
+import com.example.ui.screens.AnimeDetailScreen
 import com.example.ui.screens.ChannelsScreen
 import com.example.ui.screens.ChatRoomScreen
 import com.example.ui.screens.EconomyGameScreen
@@ -106,6 +107,7 @@ fun AnimeMainApp(
     var showEconomyScreen by remember { mutableStateOf(false) }
     var showOtakuSenseiDialog by remember { mutableStateOf(false) }
     var showAdminPanel by remember { mutableStateOf(false) }
+    var activeAnimeDetail by remember { mutableStateOf<com.example.data.model.AnimeItem?>(null) }
 
     // State flows
     val posts by viewModel.posts.collectAsStateWithLifecycle()
@@ -171,7 +173,56 @@ fun AnimeMainApp(
             onSendMessage = { content ->
                 viewModel.sendMessage(activeChannel!!.id, content)
             },
+            onSendMessageAdvanced = { content, mediaUrl, type, replyId, replySender, replyContent ->
+                viewModel.sendMessageAdvanced(
+                    activeChannel!!.id,
+                    content,
+                    mediaUrl,
+                    type,
+                    replyId,
+                    replySender,
+                    replyContent
+                )
+            },
+            onReactToMessage = { msgId, emoji ->
+                viewModel.reactToMessage(activeChannel!!.id, msgId, emoji)
+            },
             onBackClick = { viewModel.closeChannel() }
+        )
+        return
+    }
+
+    // Active Anime Detail Screen (Kunaiu & Animesta - Full Screen)
+    if (activeAnimeDetail != null) {
+        val detailAnime = activeAnimeDetail!!
+        val userTrackingList by viewModel.userAnimeTracking.collectAsStateWithLifecycle()
+        val currentTracking = userTrackingList.find { it.animeId == detailAnime.id }
+        val relatedAnimePosts = posts.filter {
+            it.animeTitle.contains(detailAnime.titleArabic, ignoreCase = true) ||
+            it.animeTitle.contains(detailAnime.titleEnglish, ignoreCase = true)
+        }
+
+        AnimeDetailScreen(
+            anime = detailAnime,
+            tracking = currentTracking,
+            relatedPosts = relatedAnimePosts,
+            onUpdateTracking = { status, currentEp, totalEp, score, note ->
+                viewModel.updateAnimeTracking(
+                    detailAnime.id,
+                    detailAnime.titleArabic,
+                    detailAnime.titleEnglish,
+                    detailAnime.coverImageUrl,
+                    status,
+                    currentEp,
+                    totalEp,
+                    score,
+                    note
+                )
+            },
+            onCreateDiscussionPost = { animeTitle ->
+                showCreatePostDialog = true
+            },
+            onClose = { activeAnimeDetail = null }
         )
         return
     }
@@ -405,7 +456,8 @@ fun AnimeMainApp(
                         onFollowToggle = { targetId -> viewModel.toggleFollowUser(targetId) },
                         onSendFriendRequest = { targetId -> viewModel.sendFriendRequest(targetId) },
                         onPostClick = { post -> viewModel.openComments(post) },
-                        onChannelClick = { channel -> viewModel.openChannel(channel) }
+                        onChannelClick = { channel -> viewModel.openChannel(channel) },
+                        onAnimeClick = { anime -> activeAnimeDetail = anime }
                     )
                 }
 
@@ -462,6 +514,19 @@ fun AnimeMainApp(
             onDismiss = { showCreatePostDialog = false },
             onSubmit = { content, animeTitle, mediaUrl, mediaType, tags ->
                 viewModel.createPost(content, animeTitle, mediaUrl, mediaType, tags)
+            },
+            onSubmitAdvanced = { content, animeTitle, mediaUrl, mediaType, tags, isSpoiler, pollQ, pollOptions, rating ->
+                viewModel.createPostAdvanced(
+                    content = content,
+                    animeTitle = animeTitle,
+                    mediaUrl = mediaUrl,
+                    mediaType = mediaType,
+                    tags = tags,
+                    isSpoiler = isSpoiler,
+                    pollQuestion = pollQ,
+                    pollOptions = pollOptions,
+                    ratingScore = rating
+                )
             }
         )
     }
