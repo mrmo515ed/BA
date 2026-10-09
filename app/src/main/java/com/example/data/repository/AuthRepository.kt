@@ -36,9 +36,14 @@ class AuthRepository(
 
     suspend fun signInWithGoogle(context: Context): Result<FirebaseUser> {
         return try {
-            val credentialManager = CredentialManager.create(context)
             val serverClientId = context.getString(R.string.default_web_client_id)
+            if (serverClientId.isBlank() || serverClientId == "REPLACE_WITH_WEB_CLIENT_ID") {
+                val errorMsg = "Google Web Client ID غير متوفر. يرجى إضافة google-services.json الحقيقي مع بصمة SHA-1 في Firebase."
+                Log.e(TAG, errorMsg)
+                return Result.failure(IllegalStateException(errorMsg))
+            }
 
+            val credentialManager = CredentialManager.create(context)
             val signInOption = GetSignInWithGoogleOption.Builder(serverClientId)
                 .build()
 
@@ -70,9 +75,13 @@ class AuthRepository(
     suspend fun trySilentSignIn(context: Context): FirebaseUser? {
         return try {
             if (auth.currentUser != null) return auth.currentUser
-            val credentialManager = CredentialManager.create(context)
             val serverClientId = context.getString(R.string.default_web_client_id)
+            if (serverClientId.isBlank() || serverClientId == "REPLACE_WITH_WEB_CLIENT_ID") {
+                Log.d(TAG, "Silent sign in skipped: serverClientId is placeholder or empty")
+                return null
+            }
 
+            val credentialManager = CredentialManager.create(context)
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setServerClientId(serverClientId)
                 .setAutoSelectEnabled(true)
