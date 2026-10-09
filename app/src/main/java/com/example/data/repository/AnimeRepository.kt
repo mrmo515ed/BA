@@ -16,6 +16,8 @@ import com.example.data.model.UserProfile
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.PersistentCacheSettings
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +29,20 @@ private const val TAG = "AnimeRepository"
 class AnimeRepository(
     private val db: FirebaseFirestore
 ) {
+    init {
+        try {
+            val settings = FirebaseFirestoreSettings.Builder()
+                .setLocalCacheSettings(
+                    PersistentCacheSettings.newBuilder()
+                        .setSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                        .build()
+                )
+                .build()
+            db.firestoreSettings = settings
+        } catch (_: Exception) {
+            // Settings already applied or instance active
+        }
+    }
     constructor(context: Context) : this(
         FirebaseFirestore.getInstance(
             context.applicationContext.getString(R.string.firestore_database_id)

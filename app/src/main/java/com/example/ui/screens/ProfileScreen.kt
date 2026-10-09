@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -39,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -57,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -314,6 +317,156 @@ fun ProfileScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = AnimeGold
                             )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Otaku Combat Identity Card (Interactive Rank & Power Level)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
+                    border = BorderStroke(1.dp, AnimeCyan.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(AnimeCyan.copy(alpha = 0.08f), AnimeCardSurface)
+                                )
+                            )
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(AnimeCyan.copy(alpha = 0.2f))
+                                        .border(1.dp, AnimeCyan, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = AnimeCyan,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "بطاقة هوية الأوتاكو القتالية",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = AnimeTextPrimary
+                                    )
+                                    Text(
+                                        text = "رتبة: قائد كتيبة الاستطلاع ⚔️",
+                                        fontSize = 11.sp,
+                                        color = AnimeCyan
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(AnimeCrimson.copy(alpha = 0.2f))
+                                    .border(1.dp, AnimeCrimson, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "طاقة: 9,850 CP",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = AnimeCrimson
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Progress to next tier
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "المستوى 28 (محارب متقدم)",
+                                fontSize = 11.sp,
+                                color = AnimeTextSecondary
+                            )
+                            Text(
+                                text = "7,450 / 10,000 XP",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AnimeCyan
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        LinearProgressIndicator(
+                            progress = { 0.745f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = AnimeCyan,
+                            trackColor = AnimeDarkSurface
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Special Badges Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AnimeDarkSurface)
+                                    .border(0.5.dp, AnimeBorder, RoundedCornerShape(6.dp))
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "⚡ مزامنة فائقة", fontSize = 10.sp, color = AnimeCyan)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AnimeDarkSurface)
+                                    .border(0.5.dp, AnimeBorder, RoundedCornerShape(6.dp))
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "🛡️ كاش محلي فوري", fontSize = 10.sp, color = AnimeGold)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AnimeDarkSurface)
+                                    .border(0.5.dp, AnimeBorder, RoundedCornerShape(6.dp))
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "👑 أسطورة الشونين", fontSize = 10.sp, color = AnimeViolet)
+                            }
                         }
                     }
                 }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Movie
@@ -101,6 +102,7 @@ fun AnimeTopAppBar(
     onSearchClick: () -> Unit,
     onReelsClick: () -> Unit = {},
     onGamesClick: () -> Unit = {},
+    onAiSenseiClick: () -> Unit = {},
     onProfileClick: () -> Unit
 ) {
     TopAppBar(
@@ -164,6 +166,17 @@ fun AnimeTopAppBar(
             }
         },
         actions = {
+            IconButton(
+                onClick = onAiSenseiClick,
+                modifier = Modifier.testTag("app_bar_ai_sensei_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "أوتاكو سينسي AI",
+                    tint = AnimeCyan
+                )
+            }
+
             IconButton(
                 onClick = onReelsClick,
                 modifier = Modifier.testTag("app_bar_reels_button")

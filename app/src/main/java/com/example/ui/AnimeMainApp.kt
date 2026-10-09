@@ -1,15 +1,28 @@
 package com.example.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -23,9 +36,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Story
@@ -34,6 +52,7 @@ import com.example.ui.components.CommentsBottomSheet
 import com.example.ui.components.CreateChannelDialog
 import com.example.ui.components.CreatePostDialog
 import com.example.ui.components.CreateStoryDialog
+import com.example.ui.components.OtakuSenseiDialog
 import com.example.ui.components.StoryViewerDialog
 import com.example.ui.screens.ChannelsScreen
 import com.example.ui.screens.ChatRoomScreen
@@ -46,8 +65,11 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.ReelsScreen
 import com.example.ui.screens.StartLiveStreamDialog
 import com.example.ui.theme.AnimeCrimson
+import com.example.ui.theme.AnimeCyan
 import com.example.ui.theme.AnimeDarkSurface
 import com.example.ui.theme.AnimeTextSecondary
+import com.example.util.NetworkStatus
+import com.example.util.NetworkStatusMonitor
 
 enum class AnimeTab(val label: String) {
     FEED("الرئيسية"),
@@ -64,6 +86,12 @@ fun AnimeMainApp(
 ) {
     var selectedTab by remember { mutableStateOf(AnimeTab.FEED) }
 
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkStatusMonitor(context) }
+    val networkStatus by networkMonitor.networkStatusFlow.collectAsStateWithLifecycle(
+        initialValue = if (networkMonitor.isOnline) NetworkStatus.AVAILABLE else NetworkStatus.UNAVAILABLE
+    )
+
     // Dialog states
     var showCreatePostDialog by remember { mutableStateOf(false) }
     var showCreateStoryDialog by remember { mutableStateOf(false) }
@@ -72,6 +100,7 @@ fun AnimeMainApp(
     var activeStoryToView by remember { mutableStateOf<Story?>(null) }
     var showReelsScreen by remember { mutableStateOf(false) }
     var showEconomyScreen by remember { mutableStateOf(false) }
+    var showOtakuSenseiDialog by remember { mutableStateOf(false) }
 
     // State flows
     val posts by viewModel.posts.collectAsStateWithLifecycle()
@@ -158,6 +187,7 @@ fun AnimeMainApp(
                 onSearchClick = { selectedTab = AnimeTab.EXPLORE },
                 onReelsClick = { showReelsScreen = true },
                 onGamesClick = { showEconomyScreen = true },
+                onAiSenseiClick = { showOtakuSenseiDialog = true },
                 onProfileClick = { selectedTab = AnimeTab.PROFILE }
             )
         },
@@ -259,11 +289,51 @@ fun AnimeMainApp(
             }
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            AnimatedVisibility(
+                visible = networkStatus != NetworkStatus.AVAILABLE,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(AnimeCrimson.copy(alpha = 0.9f), AnimeDarkSurface)
+                            )
+                        )
+                        .padding(horizontal = 16.dp, vertical = 7.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WifiOff,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "وضع عدم الاتصال — المنشورات والرسائل والصور تعمل محلياً من الكاش الفائق ⚡",
+                            fontSize = 11.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
             when (selectedTab) {
                 AnimeTab.FEED -> {
                     FeedScreen(
@@ -334,6 +404,7 @@ fun AnimeMainApp(
             }
         }
     }
+}
 
     // Story Viewer Dialog
     if (activeStoryToView != null) {
@@ -390,6 +461,16 @@ fun AnimeMainApp(
             onDismiss = { viewModel.closeComments() },
             onAddComment = { content ->
                 viewModel.addComment(activePostForComments!!.id, content)
+            }
+        )
+    }
+
+    // Otaku Sensei AI Dialog
+    if (showOtakuSenseiDialog) {
+        OtakuSenseiDialog(
+            onDismissRequest = { showOtakuSenseiDialog = false },
+            onRewardEarned = { _ ->
+                viewModel.claimDailyReward()
             }
         )
     }
