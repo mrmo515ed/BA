@@ -101,7 +101,12 @@ fun ReelsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🎬", fontSize = 52.sp)
+                    Icon(
+                        imageVector = Icons.Default.ChatBubble,
+                        contentDescription = null,
+                        tint = AnimeNeonPurple,
+                        modifier = Modifier.size(52.dp)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "لا توجد مقاطع ريلز أنمي بعد",
@@ -114,7 +119,7 @@ fun ReelsScreen(
                         onClick = { showCreateDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = AnimeNeonPurple)
                     ) {
-                        Text("أنشئ أول ريلز الآن 🔥", color = Color.White)
+                        Text("أنشئ أول ريلز الآن", color = Color.White)
                     }
                 }
             }
@@ -131,7 +136,7 @@ fun ReelsScreen(
                     currentUserId = currentUserId,
                     onLikeClick = { onLikeClick(reel.id) },
                     onShareClick = {
-                        Toast.makeText(context, "تم نسخ رابط الريلز! 🎬", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "تم نسخ رابط الريلز بنجاح", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -174,7 +179,7 @@ fun ReelsScreen(
                 onSubmit = { caption, animeTitle, previewRes ->
                     onCreateReelClick(caption, animeTitle, previewRes)
                     showCreateDialog = false
-                    Toast.makeText(context, "تم نشر الريلز بنجاح! 🔥", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "تم نشر الريلز بنجاح!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -394,7 +399,7 @@ fun CreateReelDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "نشر مقطع ريلز جديد 🎬",
+                        text = "نشر مقطع ريلز جديد",
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
                         color = AnimeTextPrimary
@@ -453,9 +458,9 @@ fun CreateReelDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(
-                        "battle" to "قتال أنمي 💥",
-                        "character" to "شخصية أسطورية ⚔️",
-                        "banner" to "مشهد سينمائي 🌌"
+                        "battle" to "قتال أنمي",
+                        "character" to "شخصية أسطورية",
+                        "banner" to "مشهد سينمائي"
                     ).forEach { (id, label) ->
                         val isSelected = selectedPreview == id
                         Box(
@@ -492,7 +497,7 @@ fun CreateReelDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AnimeNeonPurple)
                 ) {
-                    Text("نشر الريلز الآن 🔥", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("نشر الريلز الآن", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

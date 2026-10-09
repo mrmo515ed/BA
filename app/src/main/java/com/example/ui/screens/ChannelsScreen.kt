@@ -94,7 +94,7 @@ fun ChannelsScreen(
             item {
                 Column(modifier = Modifier.padding(bottom = 6.dp)) {
                     Text(
-                        text = "نوادي، قنوات وغرف الأنمي 🛡️",
+                        text = "نوادي، قنوات وغرف الأنمي",
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = AnimeTextPrimary
@@ -149,7 +149,12 @@ fun ChannelsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "💬", fontSize = 44.sp)
+                            Icon(
+                                imageVector = Icons.Default.Forum,
+                                contentDescription = null,
+                                tint = AnimeTextMuted,
+                                modifier = Modifier.size(44.dp)
+                            )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "لا توجد قنوات أو مجموعات في هذا القسم حالياً",
@@ -280,12 +285,12 @@ fun ChannelCardItem(
                         // Type Badge
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(AnimeCardSurfaceHover)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                 .clip(RoundedCornerShape(6.dp))
+                                 .background(AnimeCardSurfaceHover)
+                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (channel.isBroadcastOnly) "⚡ بث" else "💬 نقاش",
+                                text = if (channel.isBroadcastOnly) "بث رسمي" else "نقاش عام",
                                 fontSize = 10.sp,
                                 color = if (channel.isBroadcastOnly) AnimeViolet else AnimeCyan,
                                 fontWeight = FontWeight.Bold
@@ -312,7 +317,7 @@ fun ChannelCardItem(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "💬 ${channel.lastMessageText}",
+                        text = channel.lastMessageText,
                         fontSize = 11.sp,
                         color = AnimeCrimson,
                         maxLines = 1,

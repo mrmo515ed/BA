@@ -264,7 +264,7 @@ fun ExploreScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "الترند الحالي في بلاك انمي 🔥",
+                                text = "الترند الحالي في بلاك انمي",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeTextPrimary
@@ -306,7 +306,7 @@ fun ExploreScreen(
                 // Visual content gallery
                 item {
                     Text(
-                        text = "المحتوى المرئي والفنون المستكشفة 🎨",
+                        text = "المحتوى المرئي وفنون الأنمي",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = AnimeTextPrimary,
@@ -314,10 +314,10 @@ fun ExploreScreen(
                     )
 
                     val visualArtItems = listOf(
-                        Triple(R.drawable.anime_character_art_1791388984389, "سولو ليفلينغ", "🔥 890 إعجاب"),
-                        Triple(R.drawable.anime_manga_art_1791388998934, "صدام العمالقة", "⚔️ 1.2K إعجاب"),
-                        Triple(R.drawable.black_anime_banner_1791388840143, "طوكيو الليلية", "🌃 950 إعجاب"),
-                        Triple(R.drawable.black_anime_logo_1791388824621, "رمز بلاك انمي", "🖤 3.4K إعجاب")
+                        Triple(R.drawable.anime_character_art_1791388984389, "سولو ليفلينغ", "890 إعجاب"),
+                        Triple(R.drawable.anime_manga_art_1791388998934, "صدام العمالقة", "1.2K إعجاب"),
+                        Triple(R.drawable.black_anime_banner_1791388840143, "طوكيو الليلية", "950 إعجاب"),
+                        Triple(R.drawable.black_anime_app_icon_1791552412791, "شعار بلاك انمي", "3.4K إعجاب")
                     )
 
                     Column(
@@ -411,7 +411,7 @@ fun ExploreScreen(
                     if (matchedUsers.isNotEmpty()) {
                         item {
                             Text(
-                                text = "المستخدمون والأوتاكو (${matchedUsers.size}) 👥",
+                                text = "المستخدمون والأوتاكو (${matchedUsers.size})",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeCyan,
@@ -484,7 +484,7 @@ fun ExploreScreen(
                                     IconButton(
                                         onClick = {
                                             onSendFriendRequest(user.userId)
-                                            Toast.makeText(context, "تم إرسال طلب الصداقة! 🤝", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "تم إرسال طلب الصداقة بنجاح", Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = Modifier
                                             .size(34.dp)
@@ -509,7 +509,7 @@ fun ExploreScreen(
                     if (matchedAnimeSeries.isNotEmpty()) {
                         item {
                             Text(
-                                text = "الأنمي والسلاسل (${matchedAnimeSeries.size}) 🎬",
+                                text = "الأنمي والسلاسل (${matchedAnimeSeries.size})",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeGold,
@@ -560,7 +560,7 @@ fun ExploreScreen(
                     if (matchedChannels.isNotEmpty()) {
                         item {
                             Text(
-                                text = "النوادي والقنوات (${matchedChannels.size}) 🛡️",
+                                text = "النوادي والقنوات (${matchedChannels.size})",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeViolet,
@@ -611,7 +611,7 @@ fun ExploreScreen(
                     if (matchedPosts.isNotEmpty()) {
                         item {
                             Text(
-                                text = "المحتوى والمنشورات (${matchedPosts.size}) 📝",
+                                text = "المحتوى والمنشورات (${matchedPosts.size})",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeCrimson,

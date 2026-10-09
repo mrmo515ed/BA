@@ -31,6 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -111,7 +116,7 @@ fun AuthScreen(
                     .padding(3.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.black_anime_logo_1791388824621),
+                    painter = painterResource(id = R.drawable.black_anime_app_icon_1791552412791),
                     contentDescription = "شعار بلاك انمي",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -147,9 +152,9 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                FeatureBadge(title = "قصص ونقاشات", iconText = "🔥")
-                FeatureBadge(title = "قنوات أوتاكو", iconText = "⚔️")
-                FeatureBadge(title = "محادثات فورية", iconText = "💬")
+                FeatureBadge(title = "قصص ونقاشات", icon = Icons.Default.Whatshot, iconTint = AnimeCrimson)
+                FeatureBadge(title = "قنوات أوتاكو", icon = Icons.Default.Campaign, iconTint = AnimeViolet)
+                FeatureBadge(title = "محادثات فورية", icon = Icons.Default.Forum, iconTint = AnimeCyan)
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -240,17 +245,22 @@ fun AuthScreen(
 }
 
 @Composable
-private fun FeatureBadge(title: String, iconText: String) {
+private fun FeatureBadge(title: String, icon: ImageVector, iconTint: androidx.compose.ui.graphics.Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(AnimeCardSurface)
             .border(1.dp, AnimeBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        Text(text = iconText, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(4.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = iconTint,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = title,
             fontSize = 11.sp,

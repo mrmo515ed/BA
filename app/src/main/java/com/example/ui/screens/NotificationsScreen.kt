@@ -94,7 +94,7 @@ fun NotificationsScreen(
             ) {
                 Column {
                     Text(
-                        text = "مركز الإشعارات الفورية ⚡",
+                        text = "مركز الإشعارات الفورية",
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = AnimeTextPrimary

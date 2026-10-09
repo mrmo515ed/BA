@@ -123,7 +123,7 @@ fun AnimeTopAppBar(
                     contentAlignment = Alignment.Center
                 ) {
                     androidx.compose.foundation.Image(
-                        painter = painterResource(id = R.drawable.black_anime_logo_1791388824621),
+                        painter = painterResource(id = R.drawable.black_anime_app_icon_1791552412791),
                         contentDescription = "شعار بلاك انمي",
                         modifier = Modifier
                             .fillMaxSize()
@@ -420,7 +420,7 @@ fun CreatePostDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "نشر منشور أنمي جديد 🔥",
+                        text = "نشر منشور أنمي جديد",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = AnimeTextPrimary
@@ -603,7 +603,7 @@ fun CreatePostDialog(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("نشر في المجتمع الآن 🔥", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("نشر في المجتمع الآن", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -641,7 +641,7 @@ fun CreateStoryDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "إضافة قصة أنمي (24 ساعة) ⚡",
+                        text = "إضافة قصة أنمي (24 ساعة)",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = AnimeTextPrimary
@@ -738,7 +738,7 @@ fun CreateStoryDialog(
 
                 Button(
                     onClick = {
-                        onSubmit(caption.ifBlank { "قصة أنمي رائعة 🔥" }, animeTag, selectedImage)
+                        onSubmit(caption.ifBlank { "قصة أنمي مميزة" }, animeTag, selectedImage)
                         onDismiss()
                     },
                     modifier = Modifier
@@ -748,7 +748,7 @@ fun CreateStoryDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = AnimeViolet),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("نشر القصة الآن ⚡", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("نشر القصة الآن", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -943,7 +943,7 @@ fun CommentsBottomSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "التعليقات (${comments.size}) 💬",
+                text = "التعليقات (${comments.size})",
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp,
                 color = AnimeTextPrimary,
@@ -958,7 +958,7 @@ fun CommentsBottomSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "كن أول من يعلق على هذا المنشور! 🔥",
+                        text = "كن أول من يعلق على هذا المنشور!",
                         color = AnimeTextMuted,
                         fontSize = 14.sp
                     )
@@ -1080,7 +1080,7 @@ fun CreateChannelDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "إنشاء نادي أو قناة أنمي 🛡️",
+                    text = "إنشاء نادي أو قناة أنمي",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = AnimeTextPrimary
@@ -1137,7 +1137,7 @@ fun CreateChannelDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "💬 مجموعة مناقشة",
+                            text = "مجموعة مناقشة",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -1154,7 +1154,7 @@ fun CreateChannelDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "⚡ قناة بث (للمسؤولين فقط)",
+                            text = "قناة بث (للمسؤولين)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -1179,7 +1179,7 @@ fun CreateChannelDialog(
                             .padding(vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("🌐 عامة للجميع", fontSize = 11.sp, color = AnimeTextPrimary)
+                        Text("عامة للجميع", fontSize = 11.sp, color = AnimeTextPrimary)
                     }
 
                     Box(
@@ -1192,7 +1192,7 @@ fun CreateChannelDialog(
                             .padding(vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("🔒 خاصة بالدعوة فقط", fontSize = 11.sp, color = AnimeTextPrimary)
+                        Text("خاصة بالدعوة فقط", fontSize = 11.sp, color = AnimeTextPrimary)
                     }
                 }
 
@@ -1213,7 +1213,7 @@ fun CreateChannelDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = AnimeCrimson),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("تأسيس النادي الآن 🛡️", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("تأسيس النادي الآن", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

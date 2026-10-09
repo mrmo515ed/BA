@@ -133,7 +133,7 @@ fun EconomyGameScreen(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "نادي ألعاب وجوائز الأوتاكو 🏆",
+                        text = "نادي ألعاب وجوائز الأوتاكو",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = Color.White
@@ -156,7 +156,7 @@ fun EconomyGameScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "اقتصاد ورصيد الأوتاكو 🪙",
+                            text = "اقتصاد ورصيد الأوتاكو",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = AnimeTextPrimary
@@ -169,7 +169,7 @@ fun EconomyGameScreen(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "المستوى ${economy.level} ⚡",
+                                text = "المستوى ${economy.level}",
                                 fontWeight = FontWeight.Black,
                                 fontSize = 11.sp,
                                 color = AnimeNeonPurple
@@ -236,7 +236,7 @@ fun EconomyGameScreen(
                     .fillMaxWidth()
                     .clickable {
                         onClaimDailyReward()
-                        Toast.makeText(context, "تم استلام مكافأة الحضور اليومي: +150 كوينز و +10 جواهر! 🎉", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "تم استلام مكافأة الحضور اليومي: +150 كوينز و +10 جواهر!", Toast.LENGTH_SHORT).show()
                     },
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = AnimeCardSurface),
@@ -260,12 +260,17 @@ fun EconomyGameScreen(
                                 .background(AnimeGold.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("🎁", fontSize = 26.sp)
+                            Icon(
+                                imageVector = Icons.Default.WorkspacePremium,
+                                contentDescription = null,
+                                tint = AnimeGold,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
 
                         Column {
                             Text(
-                                text = "صندوق الحضور اليومي 🎁",
+                                text = "صندوق الحضور اليومي",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = AnimeTextPrimary
@@ -281,7 +286,7 @@ fun EconomyGameScreen(
                     Button(
                         onClick = {
                             onClaimDailyReward()
-                            Toast.makeText(context, "تم استلام مكافأة اليوم! 🎉", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "تم استلام مكافأة اليوم!", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = AnimeGold),
                         shape = RoundedCornerShape(10.dp)
@@ -310,7 +315,7 @@ fun EconomyGameScreen(
                             Icon(Icons.Default.Quiz, contentDescription = null, tint = AnimeNeonPurple, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "معركة كويز الأنمي 1v1 🧠",
+                                text = "معركة كويز الأنمي 1v1",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = AnimeTextPrimary
@@ -389,7 +394,7 @@ fun EconomyGameScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = AnimeNeonPurple)
                             ) {
                                 Text(
-                                    text = if (quizQuestionIndex + 1 < quizQuestions.size) "السؤال التالي ➡️" else "إنهاء الكويز والجوائز 🏆",
+                                    text = if (quizQuestionIndex + 1 < quizQuestions.size) "السؤال التالي" else "إنهاء الكويز واستلام الجوائز",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -403,10 +408,15 @@ fun EconomyGameScreen(
                                 .padding(vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("🏆", fontSize = 42.sp)
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = AnimeGold,
+                                modifier = Modifier.size(46.dp)
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text("انتهت المعركة بنجاح!", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AnimeTextPrimary)
-                            Text("مجموع نقاطك: $quizScore نقطة (+200 كوينز مكافأة!)", fontSize = 13.sp, color = AnimeGold)
+                            Text("مجموع نقاطك: $quizScore نقطة (+200 كوينز مكافأة)", fontSize = 13.sp, color = AnimeGold)
                             Spacer(modifier = Modifier.height(10.dp))
                             Button(
                                 onClick = {
@@ -417,7 +427,7 @@ fun EconomyGameScreen(
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = AnimeNeonPurple)
                             ) {
-                                Text("لعب جولة جديدة 🔄", color = Color.White)
+                                Text("لعب جولة جديدة", color = Color.White)
                             }
                         }
                     }
@@ -428,7 +438,7 @@ fun EconomyGameScreen(
         // Digital Collectibles & Character Cards
         item {
             Text(
-                text = "بطاقات شخصيات الأنمي النادرة 🎴",
+                text = "بطاقات شخصيات الأنمي النادرة",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = AnimeTextPrimary
@@ -437,9 +447,9 @@ fun EconomyGameScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val cards = listOf(
-                Triple("ليفاي أكرمان", "أسطوري ⭐⭐⭐", R.drawable.anime_character_art_1791388984389),
-                Triple("غوجو ساتورو", "أسطوري ⭐⭐⭐", R.drawable.anime_manga_art_1791388998934),
-                Triple("سون غوكو", "نادر جداً ⭐⭐", R.drawable.black_anime_banner_1791388840143)
+                Triple("ليفاي أكرمان", "أسطوري ★★★", R.drawable.anime_character_art_1791388984389),
+                Triple("غوجو ساتورو", "أسطوري ★★★", R.drawable.anime_manga_art_1791388998934),
+                Triple("سون غوكو", "نادر جداً ★★", R.drawable.black_anime_banner_1791388840143)
             )
 
             LazyRow(

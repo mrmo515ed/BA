@@ -26,8 +26,11 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -242,9 +245,9 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ProfileStatItem(title = "المنشورات", count = userPosts.size.toLong(), onClick = {})
-                    ProfileStatItem(title = "الأصدقاء 🤝", count = user.friends.size.toLong(), onClick = { showUsersListDialogType = "الأصدقاء" })
-                    ProfileStatItem(title = "المتابعون 👥", count = user.followers.size.toLong(), onClick = { showUsersListDialogType = "المتابعون" })
-                    ProfileStatItem(title = "يتابع ⚡", count = user.following.size.toLong(), onClick = { showUsersListDialogType = "يتابعهم" })
+                    ProfileStatItem(title = "الأصدقاء", count = user.friends.size.toLong(), onClick = { showUsersListDialogType = "الأصدقاء" })
+                    ProfileStatItem(title = "المتابعون", count = user.followers.size.toLong(), onClick = { showUsersListDialogType = "المتابعون" })
+                    ProfileStatItem(title = "المتابَعون", count = user.following.size.toLong(), onClick = { showUsersListDialogType = "يتابعهم" })
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -276,7 +279,12 @@ fun ProfileScreen(
                                     .background(AnimeGold.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("🏆", fontSize = 20.sp)
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = AnimeGold,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                             Column {
                                 Text(
@@ -292,12 +300,21 @@ fun ProfileScreen(
                                 )
                             }
                         }
-                        Text(
-                            text = "دخول 🎮",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AnimeGold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.SportsEsports,
+                                contentDescription = null,
+                                tint = AnimeGold,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "دخول",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AnimeGold
+                            )
+                        }
                     }
                 }
             }
@@ -425,7 +442,7 @@ fun ProfileScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "⚔️ ${post.animeTitle}",
+                                    text = post.animeTitle,
                                     fontSize = 11.sp,
                                     color = AnimeGold,
                                     fontWeight = FontWeight.Bold
@@ -438,9 +455,9 @@ fun ProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    Text(text = "❤️ ${post.likesCount}", fontSize = 11.sp, color = AnimeCrimson)
-                                    Text(text = "💬 ${post.commentsCount}", fontSize = 11.sp, color = AnimeTextSecondary)
-                                    Text(text = "🔁 ${post.sharesCount}", fontSize = 11.sp, color = AnimeViolet)
+                                    Text(text = "${post.likesCount} إعجاب", fontSize = 11.sp, color = AnimeCrimson)
+                                    Text(text = "${post.commentsCount} تعليق", fontSize = 11.sp, color = AnimeTextSecondary)
+                                    Text(text = "${post.sharesCount} مشاركة", fontSize = 11.sp, color = AnimeViolet)
                                 }
                             }
                         }
@@ -451,10 +468,10 @@ fun ProfileScreen(
                 // Favorite Anime Section
                 item {
                     val favoriteList = listOf(
-                        Triple(user.favoriteAnime, "الأنمي المفضل الأول ⭐ 10/10", AnimeGold),
-                        Triple("ون بيس (One Piece)", "مستمر • أسطوري 🔥", AnimeCrimson),
-                        Triple("جوجوتسو كايسن (Jujutsu Kaisen)", "مكتمل • رائع ⚡", AnimeCyan),
-                        Triple("سولو ليفلينغ (Solo Leveling)", "الموسم الجديد قريباً 🍿", AnimeViolet)
+                        Triple(user.favoriteAnime, "الأنمي المفضل الأول • تقييم ممتاز", AnimeGold),
+                        Triple("ون بيس (One Piece)", "مستمر • عمل أسطوري", AnimeCrimson),
+                        Triple("جوجوتسو كايسن (Jujutsu Kaisen)", "مكتمل • شونين خارق", AnimeCyan),
+                        Triple("سولو ليفلينغ (Solo Leveling)", "الموسم الجديد قريباً", AnimeViolet)
                     )
 
                     Column(
@@ -516,10 +533,10 @@ fun ProfileScreen(
                 // Badges
                 item {
                     val badges = listOf(
-                        Pair("عضو مؤسس 🖤", "من أوائل المنضمين لشبكة بلاك انمي"),
-                        Pair("مذيع مباشر 🔴", "بدأ بثوثاً مباشرة لمناقشة الأنمي"),
-                        Pair("ناقد شونين ⚔️", "تفاعل وشارك أكثر من 10 مراجعات ونظريات"),
-                        Pair("صانع قصص ⚡", "نشر قصص وحالات أنمي مميزة")
+                        Pair("عضو مؤسس", "من أوائل المنضمين لشبكة بلاك انمي"),
+                        Pair("مذيع مباشر", "بدأ بثوثاً مباشرة لمناقشة الأنمي"),
+                        Pair("ناقد شونين", "تفاعل وشارك أكثر من 10 مراجعات ونظريات"),
+                        Pair("صانع قصص", "نشر قصص وحالات أنمي مميزة")
                     )
 
                     Column(

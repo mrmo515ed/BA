@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Videocam
@@ -259,7 +260,7 @@ fun FeedScreen(
                         .padding(vertical = 10.dp)
                 ) {
                     Text(
-                        text = "قصص وحالات الأوتاكو ⚡",
+                        text = "قصص وحالات الأوتاكو",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = AnimeTextPrimary,
@@ -327,7 +328,12 @@ fun FeedScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "⚔️", fontSize = 48.sp)
+                            Icon(
+                                imageVector = Icons.Default.Movie,
+                                contentDescription = null,
+                                tint = AnimeTextMuted,
+                                modifier = Modifier.size(48.dp)
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "لا توجد منشورات في هذا القسم حالياً",
@@ -353,10 +359,10 @@ fun FeedScreen(
                         onCommentClick = { onCommentClick(post) },
                         onReShareClick = {
                             onReShareClick(post.id)
-                            Toast.makeText(context, "تمت إعادة مشاركة المنشور بنجاح! 🔁", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "تمت إعادة مشاركة المنشور بنجاح", Toast.LENGTH_SHORT).show()
                         },
                         onShareClick = {
-                            Toast.makeText(context, "تم نسخ رابط المنشور! 🔥", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "تم نسخ رابط المنشور", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -473,12 +479,21 @@ fun AnimePostCard(
                             .border(1.dp, AnimeBorder, RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(
-                            text = "⚔️ ${post.animeTitle}",
-                            fontSize = 11.sp,
-                            color = AnimeGold,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Movie,
+                                contentDescription = null,
+                                tint = AnimeGold,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = post.animeTitle,
+                                fontSize = 11.sp,
+                                color = AnimeGold,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
